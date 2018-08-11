@@ -5,6 +5,9 @@ module Math.Programming.Glpk where
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.List
+import Foreign.C.Types
+import Foreign.Marshal.Alloc
+import Foreign.Marshal.Array
 import Foreign.Ptr
 
 import Math.Programming
@@ -19,16 +22,41 @@ newtype Glpk a = Glpk { runGlpk :: ReaderT (Ptr Problem) IO a }
     , MonadReader (Ptr Problem)
     )
 
+toCDouble :: Double -> CDouble
+toCDouble = fromRational . toRational
+
 instance LP Glpk where
   makeVariable = do
     problem <- ask
     Column col <- liftIO $ glp_add_cols problem 1
     return (Variable (fromIntegral col))
 
-  makeConstraint = do
-    problem <- ask
-    Row row <- liftIO $ glp_add_rows problem 1
-    return (Constraint (fromIntegral row))
+  addConstraint (Constraint ex ordering) =
+    let
+      (terms, constant) = flattenExpr ex
+
+      rhs :: CDouble
+      rhs = toCDouble . negate $ constant
+
+      numVars :: CInt
+      numVars = fromIntegral (length terms)
+
+      getVar :: (Variable, Double) -> Column
+      getVar ((Variable v), _) = Column (fromIntegral v)
+
+      glpkOrdering LT = glpkLT
+      glpkOrdering GT = glpkGT
+      glpkOrdering EQ = glpkEQ
+    in do
+      problem <- ask
+      row <- liftIO $ glp_add_rows problem 1
+      liftIO $ do
+        varIndices <- mkGlpkArray (fmap getVar terms)
+        varCoefs <- mkGlpkArray (fmap (toCDouble . snd) terms)
+        glp_set_row_bnds problem row (glpkOrdering ordering) rhs rhs
+        glp_set_mat_row problem row numVars varIndices varCoefs
+        free (fromGplkArray varIndices)
+        free (fromGplkArray varCoefs)
 
   setSense sense =
     let

@@ -1,5 +1,6 @@
 module Math.Programming
   ( module Math.Programming.Expr
+  , module Math.Programming.Constraint
   , Variable (..)
   , Constraint (..)
   , Sense (..)
@@ -8,11 +9,9 @@ module Math.Programming
   ) where
 
 import Math.Programming.Expr
+import Math.Programming.Constraint
 
 newtype Variable = Variable Int
-
-data Constraint a
-  = Constraint (LinearExpr a) Ordering
 
 data Sense = Minimization | Maximization
   deriving

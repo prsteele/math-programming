@@ -12,7 +12,7 @@ tmp :: LPMonad m => m ()
 tmp = do
   x <- makeVariable
   y <- makeVariable
-  addConstraint (Constraint (Term x .+. Term y .- 7) GT)
+  addConstraint $ Term x .+. Term y .>= 7
   return ()
 
 main :: IO ()

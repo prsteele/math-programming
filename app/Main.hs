@@ -8,7 +8,7 @@ import Math.Programming
 import Math.Programming.Glpk
 import Math.Programming.Glpk.Header
 
-tmp :: Glpk ()
+tmp :: LPMonad m => m ()
 tmp = do
   x <- makeVariable
   y <- makeVariable

@@ -20,7 +20,7 @@ data SolutionStatus
   | Unbounded
   | Error
 
-class Monad m => LP m where
+class Monad m => LPMonad m where
   makeVariable :: m Variable
   addConstraint :: Constraint Variable -> m ()
   setSense :: Sense -> m ()

@@ -25,7 +25,7 @@ newtype Glpk a = Glpk { runGlpk :: ReaderT (Ptr Problem) IO a }
 toCDouble :: Double -> CDouble
 toCDouble = fromRational . toRational
 
-instance LP Glpk where
+instance LPMonad Glpk where
   makeVariable = do
     problem <- ask
     Column col <- liftIO $ glp_add_cols problem 1

@@ -2,41 +2,41 @@ module Math.Programming.Constraint where
 
 import Math.Programming.Expr
 
-data Constraint a
-  = Constraint (LinearExpr a) Ordering
+data Constraint a b
+  = Constraint (LinearExpr a b) Ordering
 
-(.<=.) :: LinearExpr a -> LinearExpr a -> Constraint a
+(.<=.) :: (Num b) => LinearExpr a b -> LinearExpr a b -> Constraint a b
 lhs .<=. rhs = Constraint (lhs .-. rhs) LT
 infix 4 .<=.
 
-(.<=) :: LinearExpr a -> Double -> Constraint a
-lhs .<= rhs = lhs .<=. Constant rhs
+(.<=) :: (Num b) => LinearExpr a b -> b -> Constraint a b
+lhs .<= rhs = lhs .<=. LinearExpr [] rhs
 infix 4 .<=
 
-(<=.) :: Double -> LinearExpr a -> Constraint a
-lhs <=. rhs = Constant lhs .<=. rhs
+(<=.) :: (Num b) => b -> LinearExpr a b -> Constraint a b
+lhs <=. rhs = LinearExpr [] lhs .<=. rhs
 infix 4 <=.
 
-(.>=.) :: LinearExpr a -> LinearExpr a -> Constraint a
+(.>=.) :: (Num b) => LinearExpr a b -> LinearExpr a b -> Constraint a b
 lhs .>=. rhs = Constraint (lhs .-. rhs) GT
 infix 4 .>=.
 
-(.>=) :: LinearExpr a -> Double -> Constraint a
-lhs .>= rhs = lhs .>=. Constant rhs
+(.>=) :: (Num b) => LinearExpr a b -> b -> Constraint a b
+lhs .>= rhs = lhs .>=. LinearExpr [] rhs
 infix 4 .>=
 
-(>=.) :: Double -> LinearExpr a -> Constraint a
-lhs >=. rhs = Constant lhs .>=. rhs
+(>=.) :: (Num b) => b -> LinearExpr a b -> Constraint a b
+lhs >=. rhs = LinearExpr [] lhs .>=. rhs
 infix 4 >=.
 
-(.==.) :: LinearExpr a -> LinearExpr a -> Constraint a
+(.==.) :: (Num b) => LinearExpr a b -> LinearExpr a b -> Constraint a b
 lhs .==. rhs = Constraint (lhs .-. rhs) EQ
 infix 4 .==.
 
-(.==) :: LinearExpr a -> Double -> Constraint a
-lhs .== rhs = lhs .==. Constant rhs
+(.==) :: (Num b) => LinearExpr a b -> b -> Constraint a b
+lhs .== rhs = lhs .==. LinearExpr [] rhs
 infix 4 .==
 
-(==.) :: Double -> LinearExpr a -> Constraint a
-lhs ==. rhs = Constant lhs .==. rhs
+(==.) :: (Num b) => b -> LinearExpr a b -> Constraint a b
+lhs ==. rhs = LinearExpr [] lhs .==. rhs
 infix 4 ==.

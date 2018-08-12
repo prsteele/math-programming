@@ -1,5 +1,6 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Math.Programming.Glpk where
 
 import Control.Monad.IO.Class
@@ -25,18 +26,16 @@ newtype Glpk a = Glpk { runGlpk :: ReaderT (Ptr Problem) IO a }
 toCDouble :: Double -> CDouble
 toCDouble = fromRational . toRational
 
-instance LPMonad Glpk where
+instance LPMonad Glpk Double where
   makeVariable = do
     problem <- ask
     Column col <- liftIO $ glp_add_cols problem 1
     return (Variable (fromIntegral col))
 
-  addConstraint (Constraint ex ordering) =
+  addConstraint (Constraint (LinearExpr terms constant) ordering) =
     let
-      (terms, constant) = flattenExpr ex
-
       rhs :: CDouble
-      rhs = toCDouble . negate $ constant
+      rhs = toCDouble (negate constant)
 
       numVars :: CInt
       numVars = fromIntegral (length terms)

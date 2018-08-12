@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Main where
 
 import Control.Monad.Reader
@@ -8,11 +9,11 @@ import Math.Programming
 import Math.Programming.Glpk
 import Math.Programming.Glpk.Header
 
-tmp :: LPMonad m => m ()
+tmp :: LPMonad m Double => m ()
 tmp = do
   x <- makeVariable
   y <- makeVariable
-  addConstraint $ Term x .+. Term y .>= 7
+  addConstraint $ 1 *: x .+. 1 *: y .>= 7
   return ()
 
 main :: IO ()

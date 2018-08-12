@@ -1,3 +1,5 @@
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Math.Programming
   ( module Math.Programming.Expr
   , module Math.Programming.Constraint
@@ -28,8 +30,8 @@ data SolutionStatus
   | Unbounded
   | Error
 
-class Monad m => LPMonad m where
+class (Num b, Monad m) => LPMonad m b | m -> b where
   makeVariable :: m Variable
-  addConstraint :: Constraint Variable -> m ()
+  addConstraint :: Constraint Variable b -> m ()
   setSense :: Sense -> m ()
   optimize :: m SolutionStatus

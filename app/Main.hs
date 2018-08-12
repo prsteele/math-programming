@@ -9,16 +9,20 @@ import Math.Programming
 import Math.Programming.Glpk
 import Math.Programming.Glpk.Header
 
-tmp :: LPMonad m Double => m ()
-tmp = do
+simple :: LPMonad m Double => m ()
+simple  = do
   x <- makeVariable
   y <- makeVariable
-  addConstraint $ 1 *: x .+. 1 *: y .>= 7
+  addConstraint $ 1 *: x .+. 1 *: y .>= 1
+  addConstraint $ 1 *: y .-. 1 *: x .>= 1
+  setObjective $ 1 *: x
+  setSense Minimization
+  optimize
   return ()
 
 main :: IO ()
 main = do
   problem <- glp_create_prob
-  runReaderT (runGlpk tmp) problem
+  runReaderT (runGlpk simple) problem
   withCString "example.lp" (glp_write_lp problem nullPtr)
   return ()

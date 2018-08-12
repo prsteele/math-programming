@@ -3,6 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Math.Programming.Glpk where
 
+import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Data.List
@@ -25,6 +26,9 @@ newtype Glpk a = Glpk { runGlpk :: ReaderT (Ptr Problem) IO a }
 
 toCDouble :: Double -> CDouble
 toCDouble = fromRational . toRational
+
+toCInt :: Int -> CInt
+toCInt = fromIntegral
 
 instance LPMonad Glpk Double where
   makeVariable = do
@@ -56,6 +60,16 @@ instance LPMonad Glpk Double where
         glp_set_mat_row problem row numVars varIndices varCoefs
         free (fromGplkArray varIndices)
         free (fromGplkArray varCoefs)
+
+  setObjective (LinearExpr terms constant) = do
+    problem <- ask
+
+    -- Set the constant term
+    liftIO $ glp_set_obj_coef problem (Column 0) (toCDouble constant)
+
+    -- Set the variable terms
+    liftIO $ forM_ terms $ \(Variable column, coef) ->
+      glp_set_obj_coef problem (Column (toCInt column)) (toCDouble coef)
 
   setSense sense =
     let

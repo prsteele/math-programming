@@ -13,7 +13,7 @@ simple :: LPMonad m Double => m ()
 simple  = do
   x <- makeVariable
   setVariableBounds x NonNegativeReals
-  y <- makeVariable `within` NonNegativeReals
+  y <- makeVariable `within` NonNegativeReals `asKind` Integer
 
   addConstraint $ 1 *: x .+. 1 *: y .>= 1
   addConstraint $ 1 *: y .-. 1 *: x .>= 1

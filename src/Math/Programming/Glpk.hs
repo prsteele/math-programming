@@ -113,3 +113,14 @@ instance LPMonad Glpk Double where
     in do
       problem <- ask
       liftIO $ glp_set_col_bnds problem column boundType (toCDouble low) (toCDouble high)
+
+  setVariableDomain (Variable variable) domain =
+    let
+      column = Column (toCInt variable)
+      vType = case domain of
+        Continuous -> glpkContinuous
+        Integer -> glpkInteger
+        Binary -> glpkBinary
+    in do
+      problem <- ask
+      liftIO $ glp_set_col_kind problem column vType

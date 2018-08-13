@@ -106,8 +106,8 @@ instance LPMonad Glpk Double where
 
       (boundType, low, high) = case bounds of
         Free -> (glpkFree, 0, 0)
-        NonNegative -> (glpkGT, 0, 0)
-        NonPositive -> (glpkLT, 0, 0)
+        NonNegativeReals -> (glpkGT, 0, 0)
+        NonPositiveReals -> (glpkLT, 0, 0)
         Interval low high -> (glpkBounded, low, high)
 
     in do

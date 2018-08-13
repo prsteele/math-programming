@@ -9,8 +9,8 @@ import Math.Programming
 import Math.Programming.Glpk
 import Math.Programming.Glpk.Header
 
-simple :: LPMonad m Double => m ()
-simple  = do
+simple :: LPMonad m b => m ()
+simple = do
   x <- makeVariable
   setVariableBounds x NonNegativeReals
   y <- makeVariable `within` NonNegativeReals `asKind` Integer

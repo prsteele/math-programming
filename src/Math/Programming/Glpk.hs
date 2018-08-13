@@ -124,3 +124,10 @@ instance LPMonad Glpk Double where
     in do
       problem <- ask
       liftIO $ glp_set_col_kind problem column vType
+
+  evaluateVariable (Variable variable) =
+    let
+      column = Column (toCInt variable)
+    in do
+      problem <- ask
+      liftIO $ realToFrac <$> glp_get_col_prim problem column

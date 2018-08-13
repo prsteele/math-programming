@@ -63,6 +63,7 @@ class (Num b, Monad m) => LPMonad m b | m -> b where
   optimize :: m SolutionStatus
   setVariableBounds :: Variable -> Bounds b -> m ()
   setVariableDomain :: Variable -> Domain -> m ()
+  evaluateVariable :: Variable -> m b
 
 makeIntegerVariable :: (LPMonad m b) => m Variable
 makeIntegerVariable = makeVariable `asKind` Integer

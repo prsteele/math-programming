@@ -14,6 +14,7 @@ module Math.Programming
   , Domain (..)
   , within
   , asKind
+  , Eval (..)
   ) where
 
 import Math.Programming.Constraint
@@ -64,6 +65,7 @@ class (Num b, Monad m) => LPMonad m b | m -> b where
   setVariableBounds :: Variable -> Bounds b -> m ()
   setVariableDomain :: Variable -> Domain -> m ()
   evaluateVariable :: Variable -> m b
+  evaluateExpression :: LinearExpr Variable b -> m b
 
 makeIntegerVariable :: (LPMonad m b) => m Variable
 makeIntegerVariable = makeVariable `asKind` Integer
@@ -82,3 +84,12 @@ asKind make domain = do
   variable <- make
   setVariableDomain variable domain
   return variable
+
+class (LPMonad m b) => Eval m a b where
+  evaluate :: a -> m b
+
+instance (LPMonad m b) => Eval m Variable b where
+  evaluate = evaluateVariable
+
+instance (LPMonad m b) => Eval m (LinearExpr Variable b) b where
+  evaluate = evaluateExpression

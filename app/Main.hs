@@ -9,6 +9,7 @@ import Math.Programming
 import Math.Programming.Glpk
 import Math.Programming.Glpk.Header
 
+simple :: LPMonad m b => m (b, b, b)
 simple = do
   x <- makeVariable
   setVariableBounds x NonNegativeReals
@@ -16,16 +17,22 @@ simple = do
 
   addConstraint $ 1 *: x .+. 1 *: y .>= 1
   addConstraint $ 1 *: y .-. 1 *: x .>= 1
-  setObjective $ 1 *: x
+
+  let objective = 1 *: x .+. 1 *: y
+
+  setObjective objective
   setSense Minimization
+  optimize
+
   xVal <- evaluateVariable x
-  yVal <- evaluateVariable y
-  return (xVal, yVal)
+  yVal <- evaluate y
+  obj <- evaluate objective
+  return (xVal, yVal, obj)
 
 main :: IO ()
 main = do
   problem <- glp_create_prob
-  (xVal, yVal) <- runReaderT (runGlpk simple) problem
-  print (xVal, yVal)
+  (xVal, yVal, obj) <- runReaderT (runGlpk simple) problem
+  print (xVal, yVal, obj)
   withCString "example.lp" (glp_write_lp problem nullPtr)
   return ()

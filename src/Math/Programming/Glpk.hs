@@ -131,3 +131,11 @@ instance LPMonad Glpk Double where
     in do
       problem <- ask
       liftIO $ realToFrac <$> glp_get_col_prim problem column
+
+  evaluateExpression (LinearExpr terms constant) =
+    let
+      variables = fmap fst terms
+      coefs = fmap snd terms
+    in do
+      values <- mapM evaluate variables
+      return $ constant + sum (zipWith (*) values coefs)

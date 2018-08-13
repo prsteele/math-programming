@@ -25,7 +25,7 @@ newtype Glpk a = Glpk { runGlpk :: ReaderT (Ptr Problem) IO a }
     )
 
 toCDouble :: Double -> CDouble
-toCDouble = fromRational . toRational
+toCDouble = realToFrac
 
 toCInt :: Int -> CInt
 toCInt = fromIntegral
@@ -42,7 +42,7 @@ instance LPMonad Glpk Double where
       rhs = toCDouble (negate constant)
 
       numVars :: CInt
-      numVars = fromIntegral (length terms)
+      numVars = toCInt (length terms)
 
       getVar :: (Variable, Double) -> Column
       getVar ((Variable v), _) = Column (fromIntegral v)

@@ -49,7 +49,7 @@ instance LPMonad Glpk Double where
 
       glpkOrdering LT = glpkLT
       glpkOrdering GT = glpkGT
-      glpkOrdering EQ = glpkEQ
+      glpkOrdering EQ = glpkBounded
     in do
       problem <- ask
       row <- liftIO $ glp_add_rows problem 1
@@ -99,3 +99,17 @@ instance LPMonad Glpk Double where
       problem <- ask
       result <- liftIO $ glp_simplex problem nullPtr
       liftIO $ convertResult problem result
+
+  setVariableBounds (Variable variable) bounds =
+    let
+      column = Column (toCInt variable)
+
+      (boundType, low, high) = case bounds of
+        Free -> (glpkFree, 0, 0)
+        NonNegative -> (glpkGT, 0, 0)
+        NonPositive -> (glpkLT, 0, 0)
+        Interval low high -> (glpkBounded, low, high)
+
+    in do
+      problem <- ask
+      liftIO $ glp_set_col_bnds problem column boundType (toCDouble low) (toCDouble high)

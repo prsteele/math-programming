@@ -8,12 +8,19 @@ module Math.Programming
   , Sense (..)
   , SolutionStatus (..)
   , LPMonad (..)
+  , VariableBounds (..)
   ) where
 
 import Math.Programming.Expr
 import Math.Programming.Constraint
 
 newtype Variable = Variable Int
+
+data VariableBounds
+  = NonNegative
+  | NonPositive
+  | Interval Double Double
+  | Free
 
 data Sense = Minimization | Maximization
   deriving
@@ -36,3 +43,4 @@ class (Num b, Monad m) => LPMonad m b | m -> b where
   setObjective :: LinearExpr Variable b -> m ()
   setSense :: Sense -> m ()
   optimize :: m SolutionStatus
+  setVariableBounds :: Variable -> VariableBounds -> m ()

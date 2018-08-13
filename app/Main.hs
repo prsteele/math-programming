@@ -13,6 +13,8 @@ simple :: LPMonad m Double => m ()
 simple  = do
   x <- makeVariable
   y <- makeVariable
+  setVariableBounds x NonNegative
+  setVariableBounds y NonNegative
   addConstraint $ 1 *: x .+. 1 *: y .>= 1
   addConstraint $ 1 *: y .-. 1 *: x .>= 1
   setObjective $ 1 *: x

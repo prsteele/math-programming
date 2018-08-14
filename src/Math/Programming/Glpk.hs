@@ -58,10 +58,20 @@ instance LPMonad Glpk Double where
         varCoefs <- mkGlpkArray (fmap (toCDouble . snd) terms)
         glp_set_row_bnds problem row (glpkOrdering ordering) rhs rhs
         glp_set_mat_row problem row numVars varIndices varCoefs
-        free (fromGplkArray varIndices)
-        free (fromGplkArray varCoefs)
+        free (fromGlpkArray varIndices)
+        free (fromGlpkArray varCoefs)
 
       return . ConstraintId . fromIntegral . fromRow $ row
+
+  deleteConstraint (ConstraintId rowNum) =
+    let
+      row = Row (toCInt rowNum)
+    in do
+      problem <- ask
+      liftIO $ do
+        rows <- mkGlpkArray [row]
+        glp_del_rows problem 1 rows
+        free (fromGlpkArray rows)
 
   setObjective (LinearExpr terms constant) = do
     problem <- ask

@@ -21,6 +21,10 @@ import Math.Programming.Constraint
 import Math.Programming.Expr
 
 newtype Variable = Variable Int
+  deriving
+    ( Read
+    , Show
+    )
 
 data Bounds b
   = NonNegativeReals

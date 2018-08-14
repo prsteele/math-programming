@@ -2,7 +2,8 @@ module Math.Programming.Expr where
 
 data LinearExpr a b = LinearExpr [(a, b)] b
   deriving
-    ( Show
+    ( Read
+    , Show
     )
 
 (*:) :: (Num b) => b -> a -> LinearExpr a b

@@ -4,6 +4,10 @@ import Math.Programming.Expr
 
 data Constraint a b
   = Constraint (LinearExpr a b) Ordering
+  deriving
+    ( Read
+    , Show
+    )
 
 (.<=.) :: (Num b) => LinearExpr a b -> LinearExpr a b -> Constraint a b
 lhs .<=. rhs = Constraint (lhs .-. rhs) LT

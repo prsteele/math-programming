@@ -61,6 +61,8 @@ instance LPMonad Glpk Double where
         free (fromGplkArray varIndices)
         free (fromGplkArray varCoefs)
 
+      return . ConstraintId . fromIntegral . fromRow $ row
+
   setObjective (LinearExpr terms constant) = do
     problem <- ask
 

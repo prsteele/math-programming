@@ -2,6 +2,8 @@
 module Main where
 
 import Control.Monad.Reader
+import Data.IORef
+import qualified Data.Map.Strict as M
 import Foreign.C.String
 import Foreign.Ptr
 
@@ -15,8 +17,11 @@ simple = do
   setVariableBounds x NonNegativeReals
   y <- makeVariable `within` NonNegativeReals `asKind` Integer
 
-  addConstraint $ 1 *: x .+. 1 *: y .>= 1
-  addConstraint $ 1 *: y .-. 1 *: x .>= 1
+  c1 <- addConstraint $ 1 *: x .+. 1 *: y .>= 1
+  c2 <- addConstraint $ 1 *: y .-. 1 *: x .>= 1
+
+  deleteConstraint c1
+  deleteConstraint c2
 
   let objective = 1 *: x .+. 1 *: y
 
@@ -32,7 +37,12 @@ simple = do
 main :: IO ()
 main = do
   problem <- glp_create_prob
-  (xVal, yVal, obj) <- runReaderT (runGlpk simple) problem
+
+  ref <- newIORef M.empty
+
+  let env = GlpkEnv problem ref
+
+  (xVal, yVal, obj) <- runReaderT (runGlpk simple) env
   print (xVal, yVal, obj)
   withCString "example.lp" (glp_write_lp problem nullPtr)
   return ()

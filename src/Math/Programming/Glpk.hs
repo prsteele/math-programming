@@ -74,30 +74,34 @@ addConstraint' (Constraint (LinearExpr terms constant) ordering) =
     numVars :: CInt
     numVars = toCInt (length terms)
 
-    getVar :: (Variable, Double) -> Column
-    getVar ((Variable v), _) = Column (fromIntegral v)
+    getColumn :: (Variable, Double) -> Column
+    getColumn = Column . toCInt . fromVariable . fst
 
-    glpkOrdering LT = glpkLT
-    glpkOrdering GT = glpkGT
-    glpkOrdering EQ = glpkBounded
+    getCoefficient :: (Variable, Double) -> CDouble
+    getCoefficient = toCDouble . snd
+
+    constraintType :: GlpkConstraintType
+    constraintType = case ordering of
+      LT -> glpkLT
+      GT -> glpkGT
+      EQ -> glpkBounded
+
+    columns :: [Column]
+    columns = fmap getColumn terms
+
+    coefficients :: [CDouble]
+    coefficients = fmap getCoefficient terms
   in do
     problem <- getProblem
-    row <- liftIO $ glp_add_rows problem 1
-    liftIO $ do
-      varIndices <- mkGlpkArray (fmap getVar terms)
-      varCoefs <- mkGlpkArray (fmap (toCDouble . snd) terms)
-      glp_set_row_bnds problem row (glpkOrdering ordering) rhs rhs
-      glp_set_mat_row problem row numVars varIndices varCoefs
-      free (fromGlpkArray varIndices)
-      free (fromGlpkArray varCoefs)
+    row <- liftIO $ do
+      row <- glp_add_rows problem 1
+      allocaGlpkArray columns $ \columnArr ->
+        allocaGlpkArray coefficients $ \coefArr -> do
+          glp_set_row_bnds problem row constraintType rhs rhs
+          glp_set_mat_row problem row numVars columnArr coefArr
+      return row
 
-    let constraintId = ConstraintId . fromIntegral . fromRow $ row
-        insertConstraint = (, ()) . M.insert constraintId row
-
-    constraintMapRef <- getConstraintMapRef
-    liftIO $ atomicModifyIORef' constraintMapRef insertConstraint
-
-    return constraintId
+    addConstraintToMap row
 
 deleteConstraint' constraintId = do
   constraintMap <- getConstraintMapRef >>= liftIO . readIORef
@@ -106,11 +110,11 @@ deleteConstraint' constraintId = do
     Just row -> do
       problem <- getProblem
       liftIO $ do
-        rows <- mkGlpkArray [row]
+        rows <- mallocGlpkArray [row]
         glp_del_rows problem 1 rows
         free (fromGlpkArray rows)
 
-      updateConstraints row
+      deleteConstraintFromMap constraintId row
 
 
 setObjective' (LinearExpr terms constant) = do
@@ -192,12 +196,24 @@ evaluateExpression' (LinearExpr terms constant) =
     values <- mapM evaluate variables
     return $ constant + sum (zipWith (*) values coefs)
 
-updateConstraints :: Row -> Glpk ()
-updateConstraints (Row removed) =
+addConstraintToMap :: Row -> Glpk ConstraintId
+addConstraintToMap row =
   let
-    alter :: Row -> Row
-    alter (Row toUpdate) | removed < toUpdate = Row (toUpdate - 1)
-                         | otherwise          = Row toUpdate
+    constraintId = ConstraintId . fromIntegral . fromRow $ row
+    insert = M.insert constraintId row
   in do
     ref <- getConstraintMapRef
-    liftIO $ modifyIORef' ref (fmap alter)
+    liftIO $ modifyIORef' ref insert
+    return constraintId
+
+deleteConstraintFromMap :: ConstraintId -> Row -> Glpk ()
+deleteConstraintFromMap constraintId (Row removed) =
+  let
+    decrement :: Row -> Row
+    decrement (Row toUpdate) | removed < toUpdate = Row (toUpdate - 1)
+                             | otherwise          = Row toUpdate
+  in do
+    ref <- getConstraintMapRef
+    liftIO $ do
+      constraintMap <- readIORef ref
+      writeIORef ref $ fmap decrement (M.delete constraintId constraintMap)

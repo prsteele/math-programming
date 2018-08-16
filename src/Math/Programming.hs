@@ -20,7 +20,8 @@ module Math.Programming
 import Math.Programming.Constraint
 import Math.Programming.Expr
 
-newtype Variable = Variable Int
+newtype Variable
+  = Variable { fromVariable :: Int }
   deriving
     ( Read
     , Show

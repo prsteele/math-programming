@@ -13,7 +13,7 @@ import Math.Programming.Glpk.Header
 
 simple :: LPMonad m b => m (b, b, b)
 simple = do
-  x <- makeVariable
+  x <- makeVariable `named` "xvar"
   setVariableBounds x NonNegativeReals
   y <- makeVariable `within` NonNegativeReals `asKind` Integer
 

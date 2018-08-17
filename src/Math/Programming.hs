@@ -15,6 +15,7 @@ module Math.Programming
   , within
   , asKind
   , Eval (..)
+  , Named (..)
   ) where
 
 import Math.Programming.Constraint
@@ -101,3 +102,18 @@ instance (LPMonad m b) => Eval m Variable b where
 
 instance (LPMonad m b) => Eval m (LinearExpr Variable b) b where
   evaluate = evaluateExpression
+
+class (LPMonad m b) => Named m a b where
+  named :: m a -> String -> m a
+
+instance (LPMonad m b) => Named m Variable b where
+  named mkVariable name = do
+    variable <- mkVariable
+    nameVariable variable name
+    return variable
+
+instance (LPMonad m b) => Named m ConstraintId b where
+  named mkConstraintId name = do
+    constraintId <- mkConstraintId
+    nameConstraint constraintId name
+    return constraintId

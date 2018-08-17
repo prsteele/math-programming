@@ -63,6 +63,7 @@ data SolutionStatus
 
 class (Num b, Monad m) => LPMonad m b | m -> b where
   makeVariable :: m Variable
+  nameVariable :: Variable -> String -> m ()
   addConstraint :: Constraint Variable b -> m ConstraintId
   deleteConstraint :: ConstraintId -> m ()
   setObjective :: LinearExpr Variable b -> m ()

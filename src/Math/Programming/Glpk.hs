@@ -10,6 +10,7 @@ import Control.Monad.Reader
 import Data.IORef
 import Data.List
 import qualified Data.Map.Strict as M
+import Foreign.C.String
 import Foreign.C.Types
 import Foreign.Marshal.Alloc
 import Foreign.Marshal.Array
@@ -29,6 +30,7 @@ newtype Glpk a = Glpk { runGlpk :: ReaderT GlpkEnv IO a }
 
 instance LPMonad Glpk Double where
   makeVariable = makeVariable'
+  nameVariable = nameVariable'
   addConstraint = addConstraint'
   deleteConstraint = deleteConstraint'
   setObjective = setObjective'
@@ -64,6 +66,14 @@ makeVariable' = do
   problem <- getProblem
   Column col <- liftIO $ glp_add_cols problem 1
   return (Variable (fromIntegral col))
+
+nameVariable' :: Variable -> String -> Glpk ()
+nameVariable' variable name =
+  let
+    column = Column . toCInt . fromVariable $ variable
+  in do
+    problem <- getProblem
+    liftIO $ withCString name (glp_set_col_name problem column)
 
 addConstraint' :: Constraint Variable Double -> Glpk ConstraintId
 addConstraint' (Constraint (LinearExpr terms constant) ordering) =

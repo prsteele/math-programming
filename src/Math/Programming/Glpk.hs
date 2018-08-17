@@ -32,6 +32,7 @@ instance LPMonad Glpk Double where
   makeVariable = makeVariable'
   nameVariable = nameVariable'
   addConstraint = addConstraint'
+  nameConstraint = nameConstraint'
   deleteConstraint = deleteConstraint'
   setObjective = setObjective'
   setSense = setSense'
@@ -112,6 +113,17 @@ addConstraint' (Constraint (LinearExpr terms constant) ordering) =
       return row
 
     addConstraintToMap row
+
+nameConstraint' :: ConstraintId -> String -> Glpk ()
+nameConstraint' constraintId name =
+  let
+    row = Row . toCInt . fromConstraintId $ constraintId
+  in do
+    problem <- getProblem
+    mRow <- lookupRow constraintId
+    case mRow of
+      Just row -> liftIO $ withCString name (glp_set_row_name problem row)
+      Nothing -> return ()
 
 deleteConstraint' constraintId = do
   constraintMap <- getConstraintMapRef >>= liftIO . readIORef
@@ -227,3 +239,8 @@ deleteConstraintFromMap constraintId (Row removed) =
     liftIO $ do
       constraintMap <- readIORef ref
       writeIORef ref $ fmap decrement (M.delete constraintId constraintMap)
+
+lookupRow :: ConstraintId -> Glpk (Maybe Row)
+lookupRow constraintId = do
+  cMap <- getConstraintMapRef >>= liftIO . readIORef
+  pure $ M.lookup constraintId cMap

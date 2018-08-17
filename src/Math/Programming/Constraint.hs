@@ -2,7 +2,8 @@ module Math.Programming.Constraint where
 
 import Math.Programming.Expr
 
-newtype ConstraintId = ConstraintId Int
+newtype ConstraintId
+  = ConstraintId { fromConstraintId :: Int }
   deriving
     ( Eq
     , Ord

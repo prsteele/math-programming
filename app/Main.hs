@@ -17,11 +17,14 @@ simple = do
   setVariableBounds x NonNegativeReals
   y <- makeVariable `within` NonNegativeReals `asKind` Integer
 
+  nameVariable y "yvar"
+
   c1 <- addConstraint $ 1 *: x .+. 1 *: y .>= 1
   c2 <- addConstraint $ 1 *: y .-. 1 *: x .>= 1
 
   deleteConstraint c1
-  deleteConstraint c2
+
+  nameConstraint c2 "con2"
 
   let objective = 1 *: x .+. 1 *: y
 

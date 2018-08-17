@@ -127,7 +127,8 @@ nameConstraint' constraintId name =
 
 deleteConstraint' constraintId = do
   constraintMap <- getConstraintMapRef >>= liftIO . readIORef
-  case M.lookup constraintId constraintMap of
+  mRow <- lookupRow constraintId
+  case mRow of
     Nothing -> return ()
     Just row -> do
       problem <- getProblem

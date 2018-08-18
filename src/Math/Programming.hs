@@ -74,14 +74,6 @@ data SolutionStatus
   | Unbounded
   | Error
 
-
-
-addIntegerVariable :: (LPMonad m) => m (Variable m)
-addIntegerVariable = addVariable `asKind` Integer
-
-addBinaryVariable :: (LPMonad m) => m (Variable m)
-addBinaryVariable = addVariable `asKind` Binary
-
 within :: (LPMonad m) => m (Variable m) -> Bounds (Numeric m) -> m (Variable m)
 within make bounds = do
   variable <- make

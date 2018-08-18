@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Main where
 
+import Control.Monad.Except
 import Control.Monad.Reader
 import Data.IORef
 import qualified Data.Map.Strict as M
@@ -13,15 +14,15 @@ import Math.Programming.Glpk.Header
 
 simple :: LPMonad m b => m (b, b, b)
 simple = do
-  x <- makeVariable `named` "xvar"
-  setVariableBounds x NonNegativeReals
-  y <- makeVariable `within` NonNegativeReals `asKind` Integer
+  z <- addVariable `named` "toDelete"
 
-  nameVariable y "yvar"
+  x <- addVariable `named` "xvar" `within` NonNegativeReals
+  y <- addVariable `named` "yvar" `within` NonNegativeReals `asKind` Integer
 
-  c1 <- addConstraint $ 1 *: x .+. 1 *: y .>= 1
-  c2 <- addConstraint $ 1 *: y .-. 1 *: x .>= 1
+  c1 <- addConstraint (1 *: x .+. 1 *: y .>= 1) `named` "toDelete"
+  c2 <- addConstraint (1 *: y .-. 1 *: x .>= 1) `named` "toBeRenamed"
 
+  deleteVariable z
   deleteConstraint c1
 
   nameConstraint c2 "con2"
@@ -41,11 +42,14 @@ main :: IO ()
 main = do
   problem <- glp_create_prob
 
-  ref <- newIORef M.empty
+  cRef <- newIORef M.empty
+  vRef <- newIORef M.empty
 
-  let env = GlpkEnv problem ref
+  let env = GlpkEnv problem cRef vRef
 
-  (xVal, yVal, obj) <- runReaderT (runGlpk simple) env
-  print (xVal, yVal, obj)
+  result <- runReaderT (runExceptT (runGlpk simple)) env
+  case result of
+    Left error -> print error
+    Right (xVal, yVal, obj) -> print (xVal, yVal, obj)
   withCString "example.lp" (glp_write_lp problem nullPtr)
   return ()

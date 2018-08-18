@@ -24,7 +24,9 @@ import Math.Programming.Expr
 newtype Variable
   = Variable { fromVariable :: Int }
   deriving
-    ( Read
+    ( Eq
+    , Ord
+    , Read
     , Show
     )
 
@@ -63,8 +65,9 @@ data SolutionStatus
   | Error
 
 class (Num b, Monad m) => LPMonad m b | m -> b where
-  makeVariable :: m Variable
+  addVariable :: m Variable
   nameVariable :: Variable -> String -> m ()
+  deleteVariable :: Variable -> m ()
   addConstraint :: Constraint Variable b -> m ConstraintId
   nameConstraint :: ConstraintId -> String -> m ()
   deleteConstraint :: ConstraintId -> m ()
@@ -76,11 +79,11 @@ class (Num b, Monad m) => LPMonad m b | m -> b where
   evaluateVariable :: Variable -> m b
   evaluateExpression :: LinearExpr Variable b -> m b
 
-makeIntegerVariable :: (LPMonad m b) => m Variable
-makeIntegerVariable = makeVariable `asKind` Integer
+addIntegerVariable :: (LPMonad m b) => m Variable
+addIntegerVariable = addVariable `asKind` Integer
 
-makeBinaryVariable :: (LPMonad m b) => m Variable
-makeBinaryVariable = makeVariable `asKind` Binary
+addBinaryVariable :: (LPMonad m b) => m Variable
+addBinaryVariable = addVariable `asKind` Binary
 
 within :: (LPMonad m b) => m Variable -> Bounds b -> m Variable
 within make bounds = do

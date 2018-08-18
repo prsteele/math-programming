@@ -6,6 +6,7 @@ module Math.Programming.Glpk where
 
 import Control.Monad
 import Control.Monad.IO.Class
+import Control.Monad.Except
 import Control.Monad.Reader
 import Data.IORef
 import Data.List
@@ -19,18 +20,20 @@ import Foreign.Ptr
 import Math.Programming
 import Math.Programming.Glpk.Header
 
-newtype Glpk a = Glpk { runGlpk :: ReaderT GlpkEnv IO a }
+newtype Glpk a = Glpk { runGlpk :: ExceptT GlpkError (ReaderT GlpkEnv IO) a }
   deriving
     ( Functor
     , Applicative
     , Monad
     , MonadIO
     , MonadReader GlpkEnv
+    , MonadError GlpkError
     )
 
 instance LPMonad Glpk Double where
-  makeVariable = makeVariable'
+  addVariable = addVariable'
   nameVariable = nameVariable'
+  deleteVariable = deleteVariable'
   addConstraint = addConstraint'
   nameConstraint = nameConstraint'
   deleteConstraint = deleteConstraint'
@@ -42,39 +45,38 @@ instance LPMonad Glpk Double where
   evaluateVariable = evaluateVariable'
   evaluateExpression = evaluateExpression'
 
-data GlpkEnv
-  = GlpkEnv
-    { _glpkEnvProblem :: Ptr Problem
-    , _glpkEnvConstraintMap :: IORef ConstraintMap
-    }
+data GlpkError
+  = UnknownVariable Variable
+  deriving
+    ( Read
+    , Show
+    )
 
-type ConstraintMap = M.Map ConstraintId Row
-
-getProblem :: Glpk (Ptr Problem)
-getProblem = asks _glpkEnvProblem
-
-getConstraintMapRef :: Glpk (IORef ConstraintMap)
-getConstraintMapRef = asks _glpkEnvConstraintMap
-
-toCDouble :: Double -> CDouble
-toCDouble = realToFrac
-
-toCInt :: Int -> CInt
-toCInt = fromIntegral
-
-makeVariable' :: Glpk Variable
-makeVariable' = do
+addVariable' :: Glpk Variable
+addVariable' = do
   problem <- getProblem
-  Column col <- liftIO $ glp_add_cols problem 1
-  return (Variable (fromIntegral col))
+  column <- liftIO $ glp_add_cols problem 1
+  let variable = Variable . fromIntegral . fromGlpkInt $ column
+  addToMap getVariableMapRef variable column
+  return variable
 
 nameVariable' :: Variable -> String -> Glpk ()
 nameVariable' variable name =
   let
-    column = Column . toCInt . fromVariable $ variable
+    column = GlpkInt . toCInt . fromVariable $ variable
   in do
     problem <- getProblem
     liftIO $ withCString name (glp_set_col_name problem column)
+
+deleteVariable' :: Variable -> Glpk ()
+deleteVariable' variable = do
+  mCol <- lookupFromMap getVariableMapRef variable
+  case mCol of
+    Nothing -> return ()
+    Just col -> do
+      problem <- getProblem
+      liftIO $ allocaGlpkArray [col] (glp_del_cols problem 1)
+      deleteFromMap getVariableMapRef variable col
 
 addConstraint' :: Constraint Variable Double -> Glpk ConstraintId
 addConstraint' (Constraint (LinearExpr terms constant) ordering) =
@@ -86,7 +88,7 @@ addConstraint' (Constraint (LinearExpr terms constant) ordering) =
     numVars = toCInt (length terms)
 
     getColumn :: (Variable, Double) -> Column
-    getColumn = Column . toCInt . fromVariable . fst
+    getColumn = GlpkInt . toCInt . fromVariable . fst
 
     getCoefficient :: (Variable, Double) -> CDouble
     getCoefficient = toCDouble . snd
@@ -112,43 +114,39 @@ addConstraint' (Constraint (LinearExpr terms constant) ordering) =
           glp_set_mat_row problem row numVars columnArr coefArr
       return row
 
-    addConstraintToMap row
+    let constraintId = ConstraintId . fromIntegral . fromGlpkInt $ row
+    addToMap getConstraintMapRef constraintId row
+    return constraintId
 
 nameConstraint' :: ConstraintId -> String -> Glpk ()
 nameConstraint' constraintId name =
   let
-    row = Row . toCInt . fromConstraintId $ constraintId
+    row = GlpkInt . toCInt . fromConstraintId $ constraintId
   in do
     problem <- getProblem
-    mRow <- lookupRow constraintId
+    mRow <- lookupFromMap getConstraintMapRef constraintId
     case mRow of
       Just row -> liftIO $ withCString name (glp_set_row_name problem row)
       Nothing -> return ()
 
 deleteConstraint' constraintId = do
-  constraintMap <- getConstraintMapRef >>= liftIO . readIORef
-  mRow <- lookupRow constraintId
+  mRow <- lookupFromMap getConstraintMapRef constraintId
   case mRow of
     Nothing -> return ()
     Just row -> do
       problem <- getProblem
-      liftIO $ do
-        rows <- mallocGlpkArray [row]
-        glp_del_rows problem 1 rows
-        free (fromGlpkArray rows)
-
-      deleteConstraintFromMap constraintId row
-
+      liftIO $ allocaGlpkArray [row] (glp_del_rows problem 1)
+      deleteFromMap getConstraintMapRef constraintId row
 
 setObjective' (LinearExpr terms constant) = do
   problem <- getProblem
 
   -- Set the constant term
-  liftIO $ glp_set_obj_coef problem (Column 0) (toCDouble constant)
+  liftIO $ glp_set_obj_coef problem (GlpkInt 0) (toCDouble constant)
 
   -- Set the variable terms
   liftIO $ forM_ terms $ \(Variable column, coef) ->
-    glp_set_obj_coef problem (Column (toCInt column)) (toCDouble coef)
+    glp_set_obj_coef problem (GlpkInt (toCInt column)) (toCDouble coef)
 
 setSense' sense =
   let
@@ -181,7 +179,7 @@ optimize' =
 
 setVariableBounds' (Variable variable) bounds =
   let
-    column = Column (toCInt variable)
+    column = GlpkInt (toCInt variable)
 
     (boundType, low, high) = case bounds of
       Free -> (glpkFree, 0, 0)
@@ -195,7 +193,7 @@ setVariableBounds' (Variable variable) bounds =
 
 setVariableDomain' (Variable variable) domain =
   let
-    column = Column (toCInt variable)
+    column = GlpkInt (toCInt variable)
     vType = case domain of
       Continuous -> glpkContinuous
       Integer -> glpkInteger
@@ -206,7 +204,7 @@ setVariableDomain' (Variable variable) domain =
 
 evaluateVariable' (Variable variable) =
   let
-    column = Column (toCInt variable)
+    column = GlpkInt (toCInt variable)
   in do
     problem <- getProblem
     liftIO $ realToFrac <$> glp_get_col_prim problem column
@@ -219,29 +217,83 @@ evaluateExpression' (LinearExpr terms constant) =
     values <- mapM evaluate variables
     return $ constant + sum (zipWith (*) values coefs)
 
-addConstraintToMap :: Row -> Glpk ConstraintId
-addConstraintToMap row =
-  let
-    constraintId = ConstraintId . fromIntegral . fromRow $ row
-    insert = M.insert constraintId row
-  in do
-    ref <- getConstraintMapRef
-    liftIO $ modifyIORef' ref insert
-    return constraintId
+data GlpkEnv
+  = GlpkEnv
+    { _glpkEnvProblem :: Ptr Problem
+    , _glpkEnvConstraintMap :: IORef ConstraintMap
+    , _glpkEnvVariableMap :: IORef VariableMap
+    }
 
-deleteConstraintFromMap :: ConstraintId -> Row -> Glpk ()
-deleteConstraintFromMap constraintId (Row removed) =
+type ConstraintMap = M.Map ConstraintId Row
+type VariableMap = M.Map Variable Column
+
+deleteFromMap
+  :: (Ord a, Ord b, Num b)
+  => Glpk (IORef (M.Map a b))
+  -- ^ An action to retrieve a reference to the map
+  -> a
+  -- ^ The key to remove
+  -> b
+  -- ^ The value being removed
+  -> Glpk ()
+deleteFromMap getMapRef removedKey removedValue =
   let
-    decrement :: Row -> Row
-    decrement (Row toUpdate) | removed < toUpdate = Row (toUpdate - 1)
-                             | otherwise          = Row toUpdate
+    decrement z = if removedValue < z
+                  then z - 1
+                  else z
   in do
-    ref <- getConstraintMapRef
+    ref <- getMapRef
     liftIO $ do
-      constraintMap <- readIORef ref
-      writeIORef ref $ fmap decrement (M.delete constraintId constraintMap)
+      mapping <- readIORef ref
+      writeIORef ref $ fmap decrement (M.delete removedKey mapping)
 
-lookupRow :: ConstraintId -> Glpk (Maybe Row)
-lookupRow constraintId = do
-  cMap <- getConstraintMapRef >>= liftIO . readIORef
-  pure $ M.lookup constraintId cMap
+lookupFromMap
+  :: (Ord a, Ord b, Num b)
+  => Glpk (IORef (M.Map a b))
+  -> a
+  -> Glpk (Maybe b)
+lookupFromMap getMapRef key = do
+  mapping <- getMapRef >>= liftIO . readIORef
+  pure $ M.lookup key mapping
+
+addToMap
+  :: (Ord a, Ord b, Num b)
+  => Glpk (IORef (M.Map a b))
+  -> a
+  -> b
+  -> Glpk ()
+addToMap getMapRef key value = do
+  ref <- getMapRef
+  liftIO $ modifyIORef' ref (M.insert key value)
+
+getProblem :: Glpk (Ptr Problem)
+getProblem = asks _glpkEnvProblem
+
+getConstraintMapRef :: Glpk (IORef ConstraintMap)
+getConstraintMapRef = asks _glpkEnvConstraintMap
+
+getConstraintMap :: Glpk ConstraintMap
+getConstraintMap = getConstraintMapRef >>= liftIO . readIORef
+
+getVariableMapRef :: Glpk (IORef VariableMap)
+getVariableMapRef = asks _glpkEnvVariableMap
+
+getVariableMap :: Glpk VariableMap
+getVariableMap = getVariableMapRef >>= liftIO . readIORef
+
+toColumns :: [Variable] -> Glpk [Column]
+toColumns variables =
+  let
+    eLookup :: M.Map Variable Column -> Variable -> Either GlpkError Column
+    eLookup m v = case M.lookup v m of
+      Nothing -> Left (UnknownVariable v)
+      Just column -> Right column
+  in do
+    varMap <- getVariableMap
+    liftEither . sequence . fmap (eLookup varMap) $ variables
+
+toCDouble :: Double -> CDouble
+toCDouble = realToFrac
+
+toCInt :: Int -> CInt
+toCInt = fromIntegral

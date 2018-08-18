@@ -2,15 +2,6 @@ module Math.Programming.Constraint where
 
 import Math.Programming.Expr
 
-newtype ConstraintId
-  = ConstraintId { fromConstraintId :: Int }
-  deriving
-    ( Eq
-    , Ord
-    , Read
-    , Show
-    )
-
 data Constraint a b
   = Constraint (LinearExpr a b) Ordering
   deriving

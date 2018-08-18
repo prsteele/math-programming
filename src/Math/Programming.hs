@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
 module Math.Programming
   ( module Math.Programming.Expr
   , module Math.Programming.Constraint
@@ -21,14 +21,24 @@ module Math.Programming
 import Math.Programming.Constraint
 import Math.Programming.Expr
 
-newtype Variable
-  = Variable { fromVariable :: Int }
-  deriving
-    ( Eq
-    , Ord
-    , Read
-    , Show
-    )
+class (Monad m, Num (Numeric m)) => LPMonad m where
+  data Variable m :: *
+  data ConstraintId m :: *
+  type Numeric m
+
+  addVariable :: m (Variable m)
+  nameVariable :: Variable m -> String -> m ()
+  deleteVariable :: Variable m -> m ()
+  addConstraint :: Constraint (Variable m) (Numeric m) -> m (ConstraintId m)
+  nameConstraint :: ConstraintId m -> String -> m ()
+  deleteConstraint :: ConstraintId m -> m ()
+  setObjective :: LinearExpr (Variable m) (Numeric m) -> m ()
+  setSense :: Sense -> m ()
+  optimize :: m SolutionStatus
+  setVariableBounds :: Variable m -> Bounds (Numeric m) -> m ()
+  setVariableDomain :: Variable m -> Domain -> m ()
+  evaluateVariable :: Variable m -> m (Numeric m)
+  evaluateExpression :: LinearExpr (Variable m) (Numeric m) -> m (Numeric m)
 
 data Bounds b
   = NonNegativeReals
@@ -64,58 +74,45 @@ data SolutionStatus
   | Unbounded
   | Error
 
-class (Num b, Monad m) => LPMonad m b | m -> b where
-  addVariable :: m Variable
-  nameVariable :: Variable -> String -> m ()
-  deleteVariable :: Variable -> m ()
-  addConstraint :: Constraint Variable b -> m ConstraintId
-  nameConstraint :: ConstraintId -> String -> m ()
-  deleteConstraint :: ConstraintId -> m ()
-  setObjective :: LinearExpr Variable b -> m ()
-  setSense :: Sense -> m ()
-  optimize :: m SolutionStatus
-  setVariableBounds :: Variable -> Bounds b -> m ()
-  setVariableDomain :: Variable -> Domain -> m ()
-  evaluateVariable :: Variable -> m b
-  evaluateExpression :: LinearExpr Variable b -> m b
 
-addIntegerVariable :: (LPMonad m b) => m Variable
+
+addIntegerVariable :: (LPMonad m) => m (Variable m)
 addIntegerVariable = addVariable `asKind` Integer
 
-addBinaryVariable :: (LPMonad m b) => m Variable
+addBinaryVariable :: (LPMonad m) => m (Variable m)
 addBinaryVariable = addVariable `asKind` Binary
 
-within :: (LPMonad m b) => m Variable -> Bounds b -> m Variable
+within :: (LPMonad m) => m (Variable m) -> Bounds (Numeric m) -> m (Variable m)
 within make bounds = do
   variable <- make
   setVariableBounds variable bounds
   return variable
 
-asKind :: (LPMonad m b) => m Variable -> Domain -> m Variable
+asKind :: (LPMonad m) => m (Variable m) -> Domain -> m (Variable m)
 asKind make domain = do
   variable <- make
   setVariableDomain variable domain
   return variable
 
-class (LPMonad m b) => Eval m a b where
-  evaluate :: a -> m b
+class (LPMonad m) => Eval m a where
+  evaluate :: a -> m (Numeric m)
 
-instance (LPMonad m b) => Eval m Variable b where
+instance (LPMonad m) => Eval m (Variable m) where
   evaluate = evaluateVariable
 
-instance (LPMonad m b) => Eval m (LinearExpr Variable b) b where
+instance (LPMonad m, b ~ Numeric m) => Eval m (LinearExpr (Variable m) b) where
   evaluate = evaluateExpression
 
-class (LPMonad m b) => Named m a b where
+class (LPMonad m) => Named m a where
   named :: m a -> String -> m a
 
-instance (LPMonad m b) => Named m Variable b where
+instance (LPMonad m) => Named m (Variable m) where
   named mkVariable name = do
     variable <- mkVariable
     nameVariable variable name
     return variable
 
-instance (LPMonad m b) => Named m ConstraintId b where
+instance (LPMonad m) => Named m (ConstraintId m) where
   named mkConstraintId name = do
     constraintId <- mkConstraintId
     nameConstraint constraintId name

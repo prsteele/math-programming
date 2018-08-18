@@ -4,7 +4,6 @@ module Main where
 import Control.Monad.Except
 import Control.Monad.Reader
 import Data.IORef
-import qualified Data.Map.Strict as M
 import Foreign.C.String
 import Foreign.Ptr
 
@@ -12,7 +11,7 @@ import Math.Programming
 import Math.Programming.Glpk
 import Math.Programming.Glpk.Header
 
-simple :: LPMonad m b => m (b, b, b)
+simple :: (LPMonad m) => m (Numeric m, Numeric m, Numeric m)
 simple = do
   z <- addVariable `named` "toDelete"
 
@@ -41,11 +40,7 @@ simple = do
 main :: IO ()
 main = do
   problem <- glp_create_prob
-
-  cRef <- newIORef M.empty
-  vRef <- newIORef M.empty
-
-  let env = GlpkEnv problem cRef vRef
+  env <- GlpkEnv problem <$> newIORef [] <*> newIORef []
 
   result <- runReaderT (runExceptT (runGlpk simple)) env
   case result of

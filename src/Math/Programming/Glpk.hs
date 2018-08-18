@@ -70,8 +70,8 @@ unregister askRef x =
 instance LPMonad Glpk where
   data Variable Glpk
     = Variable { fromVariable :: GlpkVariable }
-  data ConstraintId Glpk
-    = ConstraintId { fromConstraintId :: GlpkConstraint }
+  data Constraint Glpk
+    = Constraint { fromConstraint :: GlpkConstraint }
   type Numeric Glpk = Double
 
   addVariable = addVariable'
@@ -116,8 +116,8 @@ data GlpkError
 readColumn :: Variable Glpk -> Glpk Column
 readColumn = liftIO . readIORef . idRefRef . fromVariable
 
-readRow :: ConstraintId Glpk -> Glpk Row
-readRow = liftIO . readIORef . idRefRef . fromConstraintId
+readRow :: Constraint Glpk -> Glpk Row
+readRow = liftIO . readIORef . idRefRef . fromConstraint
 
 addVariable' :: Glpk (Variable Glpk)
 addVariable' = do
@@ -142,8 +142,8 @@ deleteVariable' variable = do
   liftIO $ allocaGlpkArray [column] (glp_del_cols problem 1)
   unregister askVariablesRef (fromVariable variable)
 
-addConstraint' :: Constraint (Variable Glpk) (Numeric Glpk) -> Glpk (ConstraintId Glpk)
-addConstraint' (Constraint (LinearExpr terms constant) ordering) =
+addConstraint' :: Inequality (Variable Glpk) (Numeric Glpk) -> Glpk (Constraint Glpk)
+addConstraint' (Inequality (LinearExpr terms constant) ordering) =
   let
     constraintType :: GlpkConstraintType
     constraintType = case ordering of
@@ -175,20 +175,20 @@ addConstraint' (Constraint (LinearExpr terms constant) ordering) =
       return $ IdRef (fromIntegral row) rowRef
 
     register askConstraintsRef constraintId
-    return (ConstraintId constraintId)
+    return (Constraint constraintId)
 
-nameConstraint' :: ConstraintId Glpk -> String -> Glpk ()
+nameConstraint' :: Constraint Glpk -> String -> Glpk ()
 nameConstraint' constraintId name = do
   problem <- askProblem
   row <- readRow constraintId
   liftIO $ withCString name (glp_set_row_name problem row)
 
-deleteConstraint' :: ConstraintId Glpk -> Glpk ()
+deleteConstraint' :: Constraint Glpk -> Glpk ()
 deleteConstraint' constraintId = do
   problem <- askProblem
   row <- readRow constraintId
   liftIO $ allocaGlpkArray [row] (glp_del_rows problem 1)
-  unregister askConstraintsRef (fromConstraintId constraintId)
+  unregister askConstraintsRef (fromConstraint constraintId)
 
 setObjective' :: LinearExpr (Variable Glpk) (Numeric Glpk) -> Glpk ()
 setObjective' (LinearExpr terms constant) = do

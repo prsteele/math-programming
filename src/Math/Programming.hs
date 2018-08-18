@@ -4,9 +4,9 @@
 {-# LANGUAGE TypeFamilies #-}
 module Math.Programming
   ( module Math.Programming.Expr
-  , module Math.Programming.Constraint
+  , module Math.Programming.Inequality
   , Variable (..)
-  , Constraint (..)
+  , Inequality (..)
   , Sense (..)
   , SolutionStatus (..)
   , LPMonad (..)
@@ -18,20 +18,20 @@ module Math.Programming
   , Named (..)
   ) where
 
-import Math.Programming.Constraint
 import Math.Programming.Expr
+import Math.Programming.Inequality
 
 class (Monad m, Num (Numeric m)) => LPMonad m where
   data Variable m :: *
-  data ConstraintId m :: *
+  data Constraint m :: *
   type Numeric m
 
   addVariable :: m (Variable m)
   nameVariable :: Variable m -> String -> m ()
   deleteVariable :: Variable m -> m ()
-  addConstraint :: Constraint (Variable m) (Numeric m) -> m (ConstraintId m)
-  nameConstraint :: ConstraintId m -> String -> m ()
-  deleteConstraint :: ConstraintId m -> m ()
+  addConstraint :: Inequality (Variable m) (Numeric m) -> m (Constraint m)
+  nameConstraint :: Constraint m -> String -> m ()
+  deleteConstraint :: Constraint m -> m ()
   setObjective :: LinearExpr (Variable m) (Numeric m) -> m ()
   setSense :: Sense -> m ()
   optimize :: m SolutionStatus
@@ -112,8 +112,8 @@ instance (LPMonad m) => Named m (Variable m) where
     nameVariable variable name
     return variable
 
-instance (LPMonad m) => Named m (ConstraintId m) where
-  named mkConstraintId name = do
-    constraintId <- mkConstraintId
-    nameConstraint constraintId name
-    return constraintId
+instance (LPMonad m) => Named m (Constraint m) where
+  named mkConstraint name = do
+    constraint <- mkConstraint
+    nameConstraint constraint name
+    return constraint

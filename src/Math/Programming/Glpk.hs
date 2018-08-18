@@ -28,44 +28,6 @@ newtype Glpk a = Glpk { runGlpk :: ExceptT GlpkError (ReaderT GlpkEnv IO) a }
     , MonadReader GlpkEnv
     , MonadError GlpkError
     )
-data GlpkEnv
-  = GlpkEnv
-  { _glpkEnvProblem :: Ptr Problem
-  , _glpkVariables :: IORef [GlpkVariable]
-  , _glpkConstraints :: IORef [GlpkConstraint]
-  }
-
-askProblem :: Glpk (Ptr Problem)
-askProblem = asks _glpkEnvProblem
-
-askVariablesRef :: Glpk (IORef [GlpkVariable])
-askVariablesRef = asks _glpkVariables
-
-askConstraintsRef :: Glpk (IORef [GlpkConstraint])
-askConstraintsRef = asks _glpkConstraints
-
-register :: Glpk (IORef [IdRef a]) -> IdRef a -> Glpk ()
-register askRef x = do
-  ref <- askRef
-  liftIO $ modifyIORef' ref (x :)
-
-unregister :: (Enum a) => Glpk (IORef [IdRef a]) -> IdRef a -> Glpk ()
-unregister askRef x =
-  let
-    decrement (IdRef _ ref) = modifyIORef' ref pred
-
-    mogrify []                  = return ()
-    mogrify (z: zs) | z <= x    = return ()
-                    | otherwise = decrement z >> mogrify zs
-  in do
-    ref <- askRef
-    liftIO $ do
-      -- Remove the element to be unregistered
-      modifyIORef' ref (delete x)
-
-      -- Modify the referenced values that were greater than the
-      -- referenced element
-      readIORef ref >>= mogrify
 
 instance LPMonad Glpk where
   data Variable Glpk
@@ -88,24 +50,63 @@ instance LPMonad Glpk where
   evaluateVariable = evaluateVariable'
   evaluateExpression = evaluateExpression'
 
-data IdRef a
-  = IdRef
-    { idRefId :: Int
-    , idRefRef :: IORef a
+data GlpkEnv
+  = GlpkEnv
+  { _glpkEnvProblem :: Ptr Problem
+  , _glpkVariables :: IORef [GlpkVariable]
+  , _glpkConstraints :: IORef [GlpkConstraint]
+  }
+
+data NamedRef a
+  = NamedRef
+    { namedRefId :: Int
+    , namedRefRef :: IORef a
     }
 
-instance Eq (IdRef a) where
-  x == y = idRefId x == idRefId y
+instance Eq (NamedRef a) where
+  x == y = namedRefId x == namedRefId y
 
-instance Ord (IdRef a) where
-  x <= y = idRefId x <= idRefId y
+instance Ord (NamedRef a) where
+  x <= y = namedRefId x <= namedRefId y
 
-instance Show (IdRef a) where
-  show = show . idRefId
+instance Show (NamedRef a) where
+  show = show . namedRefId
 
-type GlpkConstraint = IdRef Row
+type GlpkConstraint = NamedRef Row
 
-type GlpkVariable = IdRef Column
+type GlpkVariable = NamedRef Column
+
+askProblem :: Glpk (Ptr Problem)
+askProblem = asks _glpkEnvProblem
+
+askVariablesRef :: Glpk (IORef [GlpkVariable])
+askVariablesRef = asks _glpkVariables
+
+askConstraintsRef :: Glpk (IORef [GlpkConstraint])
+askConstraintsRef = asks _glpkConstraints
+
+register :: Glpk (IORef [NamedRef a]) -> NamedRef a -> Glpk ()
+register askRef x = do
+  ref <- askRef
+  liftIO $ modifyIORef' ref (x :)
+
+unregister :: (Enum a) => Glpk (IORef [NamedRef a]) -> NamedRef a -> Glpk ()
+unregister askRef x =
+  let
+    decrement (NamedRef _ ref) = modifyIORef' ref pred
+
+    mogrify []                  = return ()
+    mogrify (z: zs) | z <= x    = return ()
+                    | otherwise = decrement z >> mogrify zs
+  in do
+    ref <- askRef
+    liftIO $ do
+      -- Remove the element to be unregistered
+      modifyIORef' ref (delete x)
+
+      -- Modify the referenced values that were greater than the
+      -- referenced element
+      readIORef ref >>= mogrify
 
 data GlpkError
   = UnknownVariable GlpkVariable
@@ -114,10 +115,10 @@ data GlpkError
     )
 
 readColumn :: Variable Glpk -> Glpk Column
-readColumn = liftIO . readIORef . idRefRef . fromVariable
+readColumn = liftIO . readIORef . namedRefRef . fromVariable
 
 readRow :: Constraint Glpk -> Glpk Row
-readRow = liftIO . readIORef . idRefRef . fromConstraint
+readRow = liftIO . readIORef . namedRefRef . fromConstraint
 
 addVariable' :: Glpk (Variable Glpk)
 addVariable' = do
@@ -125,7 +126,7 @@ addVariable' = do
   variable <- liftIO $ do
     column <- glp_add_cols problem 1
     columnRef <- newIORef column
-    return $ IdRef (fromIntegral column) columnRef
+    return $ NamedRef (fromIntegral column) columnRef
   register askVariablesRef variable
   return (Variable variable)
 
@@ -172,7 +173,7 @@ addConstraint' (Inequality (LinearExpr terms constant) ordering) =
         allocaGlpkArray coefficients $ \coefficientArr -> do
           glp_set_row_bnds problem row constraintType rhs rhs
           glp_set_mat_row problem row numVars columnArr coefficientArr
-      return $ IdRef (fromIntegral row) rowRef
+      return $ NamedRef (fromIntegral row) rowRef
 
     register askConstraintsRef constraintId
     return (Constraint constraintId)

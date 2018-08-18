@@ -74,12 +74,14 @@ data SolutionStatus
   | Unbounded
   | Error
 
+-- | Constrain a variable to take on certain values.
 within :: (LPMonad m) => m (Variable m) -> Bounds (Numeric m) -> m (Variable m)
 within make bounds = do
   variable <- make
   setVariableBounds variable bounds
   return variable
 
+-- | Set the type of a variable.
 asKind :: (LPMonad m) => m (Variable m) -> Domain -> m (Variable m)
 asKind make domain = do
   variable <- make

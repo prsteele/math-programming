@@ -78,3 +78,14 @@ infixl 7 *.
 (./) :: (Num b, Fractional b) => LinearExpr a b -> b -> LinearExpr a b
 ex ./ coef = ex .* (1 / coef)
 infixl 7 ./
+
+-- | Combine equivalent terms by summing their coefficients
+simplify :: (Ord a, Num b) => LinearExpr a b -> LinearExpr a b
+simplify (LinearExpr terms constant)
+  = LinearExpr (reduce (sortOn fst terms)) constant
+  where
+    reduce []           = []
+    reduce ((x, c): []) = [(x, c)]
+    reduce ((x, c): (x', c'): xs)
+      | x == x'   = (x, c + c') : reduce xs
+      | otherwise = (x, c) : reduce xs

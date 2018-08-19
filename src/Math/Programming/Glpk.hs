@@ -32,8 +32,18 @@ newtype Glpk a = Glpk { runGlpk :: ExceptT GlpkError (ReaderT GlpkEnv IO) a }
 instance LPMonad Glpk where
   data Variable Glpk
     = Variable { fromVariable :: GlpkVariable }
+    deriving
+      ( Eq
+      , Ord
+      )
+
   data Constraint Glpk
     = Constraint { fromConstraint :: GlpkConstraint }
+    deriving
+      ( Eq
+      , Ord
+      )
+
   type Numeric Glpk = Double
 
   addVariable = addVariable'
@@ -144,8 +154,14 @@ deleteVariable' variable = do
   unregister askVariablesRef (fromVariable variable)
 
 addConstraint' :: Inequality (Variable Glpk) (Numeric Glpk) -> Glpk (Constraint Glpk)
-addConstraint' (Inequality (LinearExpr terms constant) ordering) =
+addConstraint' (Inequality expr ordering) =
   let
+    (terms, constant) =
+      let
+        LinearExpr terms constant = simplify expr
+      in
+        (terms, constant)
+
     constraintType :: GlpkConstraintType
     constraintType = case ordering of
       LT -> glpkLT
@@ -192,16 +208,19 @@ deleteConstraint' constraintId = do
   unregister askConstraintsRef (fromConstraint constraintId)
 
 setObjective' :: LinearExpr (Variable Glpk) (Numeric Glpk) -> Glpk ()
-setObjective' (LinearExpr terms constant) = do
-  problem <- askProblem
+setObjective' expr =
+  let
+    LinearExpr terms constant = simplify expr
+  in do
+    problem <- askProblem
 
-  -- Set the constant term
-  liftIO $ glp_set_obj_coef problem (GlpkInt 0) (realToFrac constant)
+    -- Set the constant term
+    liftIO $ glp_set_obj_coef problem (GlpkInt 0) (realToFrac constant)
 
-  -- Set the variable terms
-  forM_ terms $ \(variable, coef) -> do
-    column <- readColumn variable
-    liftIO $ glp_set_obj_coef problem column (realToFrac coef)
+    -- Set the variable terms
+    forM_ terms $ \(variable, coef) -> do
+      column <- readColumn variable
+      liftIO $ glp_set_obj_coef problem column (realToFrac coef)
 
 setSense' :: Sense -> Glpk ()
 setSense' sense =

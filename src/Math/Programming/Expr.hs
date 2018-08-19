@@ -1,10 +1,40 @@
+{-| Symbolic linear expressions.
+
+This module defines operators to manipulate linear expressions. Note
+that operators have a @.@ on one or both sides, for example '.+' or
+'.+.'. An argument abutting a @.@ will always be a 'LinearExpr a
+b'. For example, '.+.' adds two linear expressions together, while
+'.+' adds a linear expression to a constant.
+
+-}
 module Math.Programming.Expr where
 
-data LinearExpr a b = LinearExpr [(a, b)] b
+import Data.List (sortOn)
+
+-- | A linear expression containing variables of type @a@ and numeric
+-- coefficients of type @b@.
+--
+-- Using strings to denote variables and 'Double's as our numeric
+-- type, we could express the term /3 x + 2 y + 1/ as
+--
+-- @
+--   LinearExpr [("x", 3), ("y", 2")] 1
+-- @
+data LinearExpr a b
+  = LinearExpr
+    { _terms :: [(a, b)]
+    , _constant :: b
+    }
   deriving
     ( Read
     , Show
     )
+
+instance (Num b) => Semigroup (LinearExpr a b) where
+  (<>) = (.+.)
+
+instance (Num b) => Monoid (LinearExpr a b) where
+  mempty = LinearExpr [] 0
 
 (*:) :: (Num b) => b -> a -> LinearExpr a b
 constant *: term = LinearExpr [(term, constant)] 0

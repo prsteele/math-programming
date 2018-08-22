@@ -35,6 +35,7 @@ instance LPMonad Glpk where
     deriving
       ( Eq
       , Ord
+      , Show
       )
 
   data Constraint Glpk
@@ -42,6 +43,7 @@ instance LPMonad Glpk where
     deriving
       ( Eq
       , Ord
+      , Show
       )
 
   type Numeric Glpk = Double

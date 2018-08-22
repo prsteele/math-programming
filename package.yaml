@@ -21,7 +21,7 @@ description:         Please see the README on GitHub at <https://github.com/prst
 
 dependencies:
   - base >= 4.7 && < 5
-  - GlpkHs >= 0.1.0.0 && < 0.2
+  - glpk-hs >= 0.1.0.0 && < 0.2
   - mtl >= 2.2.2 && < 2.3
   - containers >= 0.5.11 && < 0.6
 
@@ -43,7 +43,7 @@ executables:
 
 tests:
   MathProgHs-test:
-    main:                Spec.hs
+    main:                Driver.hs
     source-dirs:         test
     ghc-options:
       - -threaded
@@ -52,4 +52,7 @@ tests:
     extra-libraries:
       - glpk
     dependencies:
-    - MathProgHs
+      - MathProgHs
+      - tasty >= 1.1.0.2 && < 1.2
+      - tasty-discover >= 4.2.0 && < 4.3
+      - tasty-hunit >= 0.10.0.1 && < 0.11

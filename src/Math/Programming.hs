@@ -73,6 +73,12 @@ data SolutionStatus
   | Infeasible
   | Unbounded
   | Error
+  deriving
+    ( Eq
+    , Ord
+    , Read
+    , Show
+    )
 
 -- | Constrain a variable to take on certain values.
 within :: (LPMonad m) => m (Variable m) -> Bounds (Numeric m) -> m (Variable m)

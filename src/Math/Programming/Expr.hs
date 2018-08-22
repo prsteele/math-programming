@@ -36,6 +36,9 @@ instance (Num b) => Semigroup (LinearExpr a b) where
 instance (Num b) => Monoid (LinearExpr a b) where
   mempty = LinearExpr [] 0
 
+sumExpr :: (Num b) => [LinearExpr a b] -> LinearExpr a b
+sumExpr = mconcat
+
 (*:) :: (Num b) => b -> a -> LinearExpr a b
 constant *: term = LinearExpr [(term, constant)] 0
 
@@ -88,4 +91,4 @@ simplify (LinearExpr terms constant)
     reduce ((x, c): []) = [(x, c)]
     reduce ((x, c): (x', c'): xs)
       | x == x'   = (x, c + c') : reduce xs
-      | otherwise = (x, c) : reduce xs
+      | otherwise = (x, c) : reduce ((x', c'): xs)

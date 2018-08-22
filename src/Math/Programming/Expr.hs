@@ -88,4 +88,4 @@ simplify (LinearExpr terms constant)
     reduce ((x, c): []) = [(x, c)]
     reduce ((x, c): (x', c'): xs)
       | x == x'   = (x, c + c') : reduce xs
-      | otherwise = (x, c) : reduce xs
+      | otherwise = (x, c) : reduce ((x', c'): xs)

@@ -120,12 +120,8 @@ basicDiet =
 
 glpkBasicDiet :: IO ()
 glpkBasicDiet = do
-  glp_term_out glpkOff
-  problem <- glp_create_prob
-  env <- GlpkEnv problem <$> newIORef [] <*> newIORef []
-  result <- runReaderT (runExceptT (runGlpk basicDiet)) env
+  result <- runGlpk basicDiet
   case result of
     Left error -> assertFailure (show error)
     Right () -> return ()
-  liftIO $ withCString "example.lp" (glp_write_lp problem nullPtr)
   return ()

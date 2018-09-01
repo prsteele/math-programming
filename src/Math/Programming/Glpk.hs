@@ -19,7 +19,7 @@ import Text.Printf
 import Math.Programming
 import Math.Programming.Glpk.Header
 
-newtype Glpk a = Glpk { runGlpk :: ExceptT GlpkError (ReaderT GlpkEnv IO) a }
+newtype Glpk a = Glpk { _runGlpk :: ExceptT GlpkError (ReaderT GlpkEnv IO) a }
   deriving
     ( Functor
     , Applicative
@@ -61,6 +61,13 @@ instance LPMonad Glpk where
   setVariableDomain = setVariableDomain'
   evaluateVariable = evaluateVariable'
   evaluateExpression = evaluateExpression'
+
+runGlpk :: Glpk a -> IO (Either GlpkError a)
+runGlpk glpk = do
+  glp_term_out glpkOff
+  problem <- glp_create_prob
+  env <- GlpkEnv problem <$> newIORef [] <*> newIORef []
+  runReaderT (runExceptT (_runGlpk glpk)) env
 
 data GlpkEnv
   = GlpkEnv

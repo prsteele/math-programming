@@ -39,12 +39,13 @@ simple = do
 
 main :: IO ()
 main = do
-  problem <- glp_create_prob
-  env <- GlpkEnv problem <$> newIORef [] <*> newIORef []
+  result <- runGlpk $ do
+    result <- simple
+    problem <- askProblem
+    liftIO $ withCString "example.lp" (glp_write_lp problem nullPtr)
+    return result
 
-  result <- runReaderT (runExceptT (runGlpk simple)) env
   case result of
     Left error -> print error
     Right (xVal, yVal, obj) -> print (xVal, yVal, obj)
-  withCString "example.lp" (glp_write_lp problem nullPtr)
   return ()

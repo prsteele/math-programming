@@ -2,8 +2,6 @@
 module Main where
 
 import Control.Monad.Except
-import Control.Monad.Reader
-import Data.IORef
 import Foreign.C.String
 import Foreign.Ptr
 
@@ -30,7 +28,7 @@ simple = do
 
   setObjective objective
   setSense Minimization
-  optimize
+  _ <- optimize
 
   xVal <- evaluateVariable x
   yVal <- evaluate y
@@ -42,10 +40,10 @@ main = do
   result <- runGlpk $ do
     result <- simple
     problem <- askProblem
-    liftIO $ withCString "example.lp" (glp_write_lp problem nullPtr)
+    _ <- liftIO $ withCString "example.lp" (glp_write_lp problem nullPtr)
     return result
 
   case result of
-    Left error -> print error
+    Left errorMsg -> print errorMsg
     Right (xVal, yVal, obj) -> print (xVal, yVal, obj)
   return ()

@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 module Diet where
 
@@ -38,7 +39,7 @@ data Nutrient = Calories | VitaminA
     , Show
     )
 
-basicDiet :: (MonadIO m, Numeric m ~ Double, LPMonad m) => m ()
+basicDiet :: (MonadIO m, LPMonad m Double) => m ()
 basicDiet =
   let
     cost :: Food -> Double

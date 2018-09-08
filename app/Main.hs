@@ -11,7 +11,7 @@ import Math.Programming
 import Math.Programming.Glpk
 import Math.Programming.Glpk.Header
 
-simple :: (LPMonad m) => m (Numeric m, Numeric m, Numeric m)
+simple :: (LPMonad m b) => m (b, b, b)
 simple = do
   z <- addVariable `named` "toDelete"
 

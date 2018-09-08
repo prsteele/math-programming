@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 module Math.Programming.Glpk where
 
@@ -29,7 +30,7 @@ newtype Glpk a = Glpk { _runGlpk :: ExceptT GlpkError (ReaderT GlpkEnv IO) a }
     , MonadError GlpkError
     )
 
-instance LPMonad Glpk where
+instance LPMonad Glpk Double where
   data Variable Glpk
     = Variable { fromVariable :: GlpkVariable }
     deriving
@@ -45,8 +46,6 @@ instance LPMonad Glpk where
       , Ord
       , Show
       )
-
-  type Numeric Glpk = Double
 
   addVariable = addVariable'
   nameVariable = nameVariable'
@@ -162,7 +161,7 @@ deleteVariable' variable = do
   liftIO $ allocaGlpkArray [column] (glp_del_cols problem 1)
   unregister askVariablesRef (fromVariable variable)
 
-addConstraint' :: Inequality (Variable Glpk) (Numeric Glpk) -> Glpk (Constraint Glpk)
+addConstraint' :: Inequality (Variable Glpk) Double -> Glpk (Constraint Glpk)
 addConstraint' (Inequality expr ordering) =
   let
     (terms, constant) =
@@ -216,7 +215,7 @@ deleteConstraint' constraintId = do
   liftIO $ allocaGlpkArray [row] (glp_del_rows problem 1)
   unregister askConstraintsRef (fromConstraint constraintId)
 
-setObjective' :: LinearExpr (Variable Glpk) (Numeric Glpk) -> Glpk ()
+setObjective' :: LinearExpr (Variable Glpk) Double -> Glpk ()
 setObjective' expr =
   let
     LinearExpr terms constant = simplify expr
@@ -262,7 +261,7 @@ optimize' =
     result <- liftIO $ glp_simplex problem nullPtr
     liftIO $ convertResult problem result
 
-setVariableBounds' :: Variable Glpk -> Bounds (Numeric Glpk) -> Glpk ()
+setVariableBounds' :: Variable Glpk -> Bounds Double -> Glpk ()
 setVariableBounds' variable bounds =
   let
     (boundType, low, high) = case bounds of
@@ -287,15 +286,15 @@ setVariableDomain' variable domain =
     column <- readColumn variable
     liftIO $ glp_set_col_kind problem column vType
 
-evaluateVariable' :: Variable Glpk -> Glpk (Numeric Glpk)
+evaluateVariable' :: Variable Glpk -> Glpk Double
 evaluateVariable' variable = do
     problem <- askProblem
     column <- readColumn variable
     liftIO $ realToFrac <$> glp_get_col_prim problem column
 
 evaluateExpression'
-  :: LinearExpr (Variable Glpk) (Numeric Glpk)
-  -> Glpk (Numeric Glpk)
+  :: LinearExpr (Variable Glpk) Double
+  -> Glpk Double
 evaluateExpression' (LinearExpr terms constant) =
   let
     variables = fmap fst terms

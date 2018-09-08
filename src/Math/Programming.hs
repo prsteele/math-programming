@@ -23,7 +23,6 @@ import Math.Programming.Expr
 import Math.Programming.Inequality
 
 class (Monad m, Num b) => LPMonad m b | m -> b where
-
   -- | The type of variables in the model. The LPMonad treats these as
   -- opaque values, but instances may expose more details.
   data Variable m :: *

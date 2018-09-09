@@ -68,17 +68,25 @@ instance LPMonad Glpk Double where
 runGlpk :: Glpk a -> IO (Either GlpkError a)
 runGlpk glpk = do
   _ <- glp_term_out glpkOff
+
   problem <- glp_create_prob
 
-  result <- alloca $ \simplexControlPtr ->
-    alloca $ \mipControlPtr -> do
-      glp_init_smcp simplexControlPtr
-      env <- GlpkEnv problem
-        <$> newIORef []
-        <*> newIORef []
-        <*> pure simplexControlPtr
-        <*> pure mipControlPtr
-      runReaderT (runExceptT (_runGlpk glpk)) env
+  -- Load the default simplex control parameters
+  simplexControl <- alloca $ \simplexControlPtr -> do
+    glp_init_smcp simplexControlPtr
+    peek simplexControlPtr
+
+  -- Load the default MIP control parameters
+  mipControl <- alloca $ \mipControlPtr -> do
+    glp_init_iocp mipControlPtr
+    peek mipControlPtr
+
+  env <- GlpkEnv problem
+         <$> newIORef []
+         <*> newIORef []
+         <*> newIORef simplexControl
+         <*> newIORef mipControl
+  result <- runReaderT (runExceptT (_runGlpk glpk)) env
 
   glp_delete_prob problem
   return result
@@ -88,8 +96,8 @@ data GlpkEnv
   { _glpkEnvProblem :: Ptr Problem
   , _glpkVariables :: IORef [GlpkVariable]
   , _glpkConstraints :: IORef [GlpkConstraint]
-  , _glpkSimplexControl :: Ptr SimplexMethodControlParameters
-  , _glpkMIPControl :: Ptr (MIPControlParameters Void)
+  , _glpkSimplexControl :: IORef SimplexMethodControlParameters
+  , _glpkMIPControl :: IORef (MIPControlParameters Void)
   }
 
 data NamedRef a
@@ -275,9 +283,13 @@ optimize' =
           return Error
   in do
     problem <- askProblem
-    controlPtr <- asks _glpkSimplexControl
-    result <- liftIO $ glp_simplex problem controlPtr
-    liftIO $ convertResult problem result
+    controlRef <- asks _glpkSimplexControl
+    liftIO $ do
+      control <- readIORef controlRef
+      alloca $ \controlPtr -> do
+        poke controlPtr control
+        result <- glp_simplex problem controlPtr
+        convertResult problem result
 
 setVariableBounds' :: Variable Glpk -> Bounds Double -> Glpk ()
 setVariableBounds' variable bounds =
@@ -327,14 +339,14 @@ setTimeout' seconds =
     millis :: Integer
     millis = round (seconds * 1000)
   in do
-    controlPtr <- asks _glpkSimplexControl
-    control <- liftIO (peek controlPtr)
+    controlRef <- asks _glpkSimplexControl
+    control <- liftIO (readIORef controlRef)
     let control' = control { smcpTimeLimitMillis = fromIntegral millis }
-    liftIO (poke controlPtr control')
+    liftIO (writeIORef controlRef control')
 
 setRelativeMIPGap' :: Double -> Glpk ()
 setRelativeMIPGap' gap = do
-  controlPtr <- asks _glpkMIPControl
-  control <- liftIO (peek controlPtr)
+  controlRef <- asks _glpkMIPControl
+  control <- liftIO (readIORef controlRef)
   let control' = control { iocpRelativeMIPGap = realToFrac gap }
-  liftIO (poke controlPtr control')
+  liftIO (writeIORef controlRef control')

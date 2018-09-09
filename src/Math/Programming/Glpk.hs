@@ -15,6 +15,7 @@ import Foreign.C.Types
 import Foreign.Marshal.Alloc
 import Foreign.Marshal.Array
 import Foreign.Ptr
+import Foreign.Storable
 import Text.Printf
 
 import Math.Programming
@@ -60,19 +61,30 @@ instance LPMonad Glpk Double where
   setVariableDomain = setVariableDomain'
   evaluateVariable = evaluateVariable'
   evaluateExpression = evaluateExpression'
+  setTimeout = setTimeout'
 
 runGlpk :: Glpk a -> IO (Either GlpkError a)
 runGlpk glpk = do
   glp_term_out glpkOff
   problem <- glp_create_prob
-  env <- GlpkEnv problem <$> newIORef [] <*> newIORef []
-  runReaderT (runExceptT (_runGlpk glpk)) env
+
+  result <- alloca $ \simplexControlPtr -> do
+    glp_init_smcp simplexControlPtr
+    env <- GlpkEnv problem
+      <$> newIORef []
+      <*> newIORef []
+      <*> pure simplexControlPtr
+    runReaderT (runExceptT (_runGlpk glpk)) env
+
+  glp_delete_prob problem
+  return result
 
 data GlpkEnv
   = GlpkEnv
   { _glpkEnvProblem :: Ptr Problem
   , _glpkVariables :: IORef [GlpkVariable]
   , _glpkConstraints :: IORef [GlpkConstraint]
+  , _glpkSimplexControl :: Ptr SimplexMethodControlParameters
   }
 
 data NamedRef a
@@ -258,7 +270,8 @@ optimize' =
           return Error
   in do
     problem <- askProblem
-    result <- liftIO $ glp_simplex problem nullPtr
+    controlPtr <- asks _glpkSimplexControl
+    result <- liftIO $ glp_simplex problem controlPtr
     liftIO $ convertResult problem result
 
 setVariableBounds' :: Variable Glpk -> Bounds Double -> Glpk ()
@@ -302,3 +315,14 @@ evaluateExpression' (LinearExpr terms constant) =
   in do
     values <- mapM evaluate variables
     return $ constant + sum (zipWith (*) values coefs)
+
+setTimeout' :: Double -> Glpk ()
+setTimeout' seconds =
+  let
+    millis :: Integer
+    millis = round (seconds * 1000)
+  in do
+    controlPtr <- asks _glpkSimplexControl
+    control <- liftIO (peek controlPtr)
+    let control' = control { smcpTimeLimitMillis = fromIntegral millis }
+    liftIO (poke controlPtr control')

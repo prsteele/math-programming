@@ -60,6 +60,9 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
   -- | Optimize the model.
   optimize :: m SolutionStatus
 
+  -- | Set the optimization timeout, in seconds
+  setTimeout :: Double -> m ()
+
   -- | Set the upper- or lower-bounds on a variable.
   setVariableBounds :: Variable m -> Bounds b -> m ()
 

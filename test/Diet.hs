@@ -4,19 +4,12 @@ module Diet where
 
 import Control.Monad
 import Control.Monad.Except
-import Control.Monad.IO.Class
-import Control.Monad.Reader
-import Data.IORef
 import Test.Tasty
 import Test.Tasty.HUnit
 import Text.Printf
 
-import Foreign.C.String
-import Foreign.Ptr
-
 import Math.Programming
 import Math.Programming.Glpk
-import Math.Programming.Glpk.Header
 
 test_diet :: TestTree
 test_diet = testGroup "Diet problem"
@@ -85,7 +78,7 @@ basicDiet =
     forM_ nutrients $ \nutrient -> do
       let lhs = sumExpr [nutrition nutrient food *: v | (food, v) <- amounts]
           (lower, upper) = nutrientBounds nutrient
-      (addConstraint $ lhs .<= upper) `named` (printf "%s_max" (show nutrient))
+      _ <- (addConstraint $ lhs .<= upper) `named` (printf "%s_max" (show nutrient))
       (addConstraint $ lhs .>= lower) `named` (printf "%s_min" (show nutrient))
 
     -- Set the objective
@@ -123,6 +116,6 @@ glpkBasicDiet :: IO ()
 glpkBasicDiet = do
   result <- runGlpk basicDiet
   case result of
-    Left error -> assertFailure (show error)
+    Left errorMsg -> assertFailure (show errorMsg)
     Right () -> return ()
   return ()

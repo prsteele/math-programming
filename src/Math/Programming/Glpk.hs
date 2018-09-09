@@ -10,6 +10,7 @@ import Control.Monad.Except
 import Control.Monad.Reader
 import Data.IORef
 import Data.List
+import Data.Void
 import Foreign.C.String
 import Foreign.C.Types
 import Foreign.Marshal.Alloc
@@ -62,19 +63,22 @@ instance LPMonad Glpk Double where
   evaluateVariable = evaluateVariable'
   evaluateExpression = evaluateExpression'
   setTimeout = setTimeout'
+  setRelativeMIPGap = setRelativeMIPGap'
 
 runGlpk :: Glpk a -> IO (Either GlpkError a)
 runGlpk glpk = do
   _ <- glp_term_out glpkOff
   problem <- glp_create_prob
 
-  result <- alloca $ \simplexControlPtr -> do
-    glp_init_smcp simplexControlPtr
-    env <- GlpkEnv problem
-      <$> newIORef []
-      <*> newIORef []
-      <*> pure simplexControlPtr
-    runReaderT (runExceptT (_runGlpk glpk)) env
+  result <- alloca $ \simplexControlPtr ->
+    alloca $ \mipControlPtr -> do
+      glp_init_smcp simplexControlPtr
+      env <- GlpkEnv problem
+        <$> newIORef []
+        <*> newIORef []
+        <*> pure simplexControlPtr
+        <*> pure mipControlPtr
+      runReaderT (runExceptT (_runGlpk glpk)) env
 
   glp_delete_prob problem
   return result
@@ -85,6 +89,7 @@ data GlpkEnv
   , _glpkVariables :: IORef [GlpkVariable]
   , _glpkConstraints :: IORef [GlpkConstraint]
   , _glpkSimplexControl :: Ptr SimplexMethodControlParameters
+  , _glpkMIPControl :: Ptr (MIPControlParameters Void)
   }
 
 data NamedRef a
@@ -326,3 +331,10 @@ setTimeout' seconds =
     control <- liftIO (peek controlPtr)
     let control' = control { smcpTimeLimitMillis = fromIntegral millis }
     liftIO (poke controlPtr control')
+
+setRelativeMIPGap' :: Double -> Glpk ()
+setRelativeMIPGap' gap = do
+  controlPtr <- asks _glpkMIPControl
+  control <- liftIO (peek controlPtr)
+  let control' = control { iocpRelativeMIPGap = realToFrac gap }
+  liftIO (poke controlPtr control')

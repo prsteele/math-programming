@@ -63,6 +63,9 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
   -- | Set the optimization timeout, in seconds
   setTimeout :: Double -> m ()
 
+  -- | Set the relative MIP gap tolerance
+  setRelativeMIPGap :: Double -> m ()
+
   -- | Set the upper- or lower-bounds on a variable.
   setVariableBounds :: Variable m -> Bounds b -> m ()
 

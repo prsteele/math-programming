@@ -277,7 +277,7 @@ optimize' =
 setVariableBounds' :: Variable Glpk -> Bounds Double -> Glpk ()
 setVariableBounds' variable bounds =
   let
-    (boundType, low, high) = case bounds of
+    (boundType, cLow, cHigh) = case bounds of
       Free -> (glpkFree, 0, 0)
       NonNegativeReals -> (glpkGT, 0, 0)
       NonPositiveReals -> (glpkLT, 0, 0)
@@ -285,7 +285,7 @@ setVariableBounds' variable bounds =
   in do
     problem <- askProblem
     column <- readColumn variable
-    liftIO $ glp_set_col_bnds problem column boundType low high
+    liftIO $ glp_set_col_bnds problem column boundType cLow cHigh
 
 setVariableDomain' :: Variable Glpk -> Domain -> Glpk ()
 setVariableDomain' variable domain =

@@ -57,7 +57,10 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
   -- | Set the optimization direction of the model.
   setSense :: Sense -> m ()
 
-  -- | Optimize the model.
+  -- | Optimize the continuous relaxation of the model.
+  optimizeLP :: m SolutionStatus
+
+  -- | Optimize the mixed-integer program.
   optimize :: m SolutionStatus
 
   -- | Set the optimization timeout, in seconds

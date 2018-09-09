@@ -87,7 +87,7 @@ basicDiet =
     setSense Minimization
 
     -- Solve the problem
-    status <- optimize
+    status <- optimizeLP
 
     -- Check that we reached optimality
     liftIO $ status @?= Optimal

@@ -57,6 +57,7 @@ instance LPMonad Glpk Double where
   deleteConstraint = deleteConstraint'
   setObjective = setObjective'
   setSense = setSense'
+  optimizeLP = optimizeLP'
   optimize = optimize'
   setVariableBounds = setVariableBounds'
   setVariableDomain = setVariableDomain'
@@ -265,21 +266,14 @@ setSense' sense =
     problem <- askProblem
     liftIO $ glp_set_obj_dir problem direction
 
-optimize' :: Glpk SolutionStatus
-optimize' =
+optimizeLP' :: Glpk SolutionStatus
+optimizeLP' =
   let
-    convertSuccess status
-      | status == glpkOptimal    = Optimal
-      | status == glpkFeasible   = Feasible
-      | status == glpkInfeasible = Infeasible
-      | status == glpkNoFeasible = Infeasible
-      | status == glpkUnbounded  = Unbounded
-      | otherwise                = Error
-
+    convertResult :: Ptr Problem -> GlpkSimplexStatus -> IO SolutionStatus
     convertResult problem result
       | result == glpkSimplexSuccess =
-          glp_get_status problem >>= return . convertSuccess
-      | otherwise                    =
+          glp_get_status problem >>= return . solutionStatus
+      | otherwise =
           return Error
   in do
     problem <- askProblem
@@ -289,6 +283,25 @@ optimize' =
       alloca $ \controlPtr -> do
         poke controlPtr control
         result <- glp_simplex problem controlPtr
+        convertResult problem result
+
+optimize' :: Glpk SolutionStatus
+optimize' =
+  let
+    convertResult :: Ptr Problem -> GlpkMIPStatus -> IO SolutionStatus
+    convertResult problem result
+      | result == glpkMIPSuccess =
+        glp_mip_status problem >>= return . solutionStatus
+      | otherwise =
+        return Error
+  in do
+    problem <- askProblem
+    controlRef <- asks _glpkMIPControl
+    liftIO $ do
+      control <- readIORef controlRef
+      alloca $ \controlPtr -> do
+        poke controlPtr control
+        result <- glp_intopt problem controlPtr
         convertResult problem result
 
 setVariableBounds' :: Variable Glpk -> Bounds Double -> Glpk ()
@@ -350,3 +363,12 @@ setRelativeMIPGap' gap = do
   control <- liftIO (readIORef controlRef)
   let control' = control { iocpRelativeMIPGap = realToFrac gap }
   liftIO (writeIORef controlRef control')
+
+solutionStatus :: GlpkSolutionStatus -> SolutionStatus
+solutionStatus status
+  | status == glpkOptimal    = Optimal
+  | status == glpkFeasible   = Feasible
+  | status == glpkInfeasible = Infeasible
+  | status == glpkNoFeasible = Infeasible
+  | status == glpkUnbounded  = Unbounded
+  | otherwise                = Error

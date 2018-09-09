@@ -65,7 +65,7 @@ instance LPMonad Glpk Double where
 
 runGlpk :: Glpk a -> IO (Either GlpkError a)
 runGlpk glpk = do
-  glp_term_out glpkOff
+  _ <- glp_term_out glpkOff
   problem <- glp_create_prob
 
   result <- alloca $ \simplexControlPtr -> do

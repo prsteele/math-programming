@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -F -pgmF tasty-discover #-}
+{-# OPTIONS_GHC -F -pgmF tasty-discover -optF --ignores="*~" #-}
 {-|
 Module : Main
 

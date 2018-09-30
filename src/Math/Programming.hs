@@ -82,6 +82,9 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
   -- | Get the value of a linear expression in the current solution.
   evaluateExpression :: LinearExpr (Variable m) b -> m b
 
+  -- | Write out the formulation.
+  writeFormulation :: FilePath -> m ()
+
 data Bounds b
   = NonNegativeReals
   | NonPositiveReals

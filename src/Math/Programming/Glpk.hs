@@ -65,6 +65,7 @@ instance LPMonad Glpk Double where
   evaluateExpression = evaluateExpression'
   setTimeout = setTimeout'
   setRelativeMIPGap = setRelativeMIPGap'
+  writeFormulation = writeFormulation'
 
 runGlpk :: Glpk a -> IO (Either GlpkError a)
 runGlpk glpk = do
@@ -87,18 +88,30 @@ runGlpk glpk = do
          <*> newIORef []
          <*> newIORef simplexControl
          <*> newIORef mipControl
+         <*> newIORef Nothing
   result <- runReaderT (runExceptT (_runGlpk glpk)) env
 
   glp_delete_prob problem
   return result
 
+data SolveType = LP | MIP | InteriorPoint
+
 data GlpkEnv
   = GlpkEnv
   { _glpkEnvProblem :: Ptr Problem
+  -- ^ A pointer to the Problem object. Most GLPK routines take this
+  -- as the first argument.
   , _glpkVariables :: IORef [GlpkVariable]
+  -- ^ The variables in the model
   , _glpkConstraints :: IORef [GlpkConstraint]
+  -- ^ The constraints in the model
   , _glpkSimplexControl :: IORef SimplexMethodControlParameters
+  -- ^ The control parameters for the simplex method
   , _glpkMIPControl :: IORef (MIPControlParameters Void)
+  -- ^ The control parameters for the MIP solver
+  , _glpkLastSolveType :: IORef (Maybe SolveType)
+  -- ^ The type of the last solve. This is needed to know whether to
+  -- retrieve simplex, interior point, or MIP solutions.
   }
 
 data NamedRef a
@@ -276,6 +289,11 @@ optimizeLP' =
       | otherwise =
           return Error
   in do
+    -- Note that we've run an LP solve
+    solveTypeRef <- asks _glpkLastSolveType
+    liftIO $ writeIORef solveTypeRef (Just LP)
+
+    -- Run Simplex
     problem <- askProblem
     controlRef <- asks _glpkSimplexControl
     liftIO $ do
@@ -295,6 +313,10 @@ optimize' =
       | otherwise =
         return Error
   in do
+    -- Note that we've run a MIP solve
+    solveTypeRef <- asks _glpkLastSolveType
+    liftIO $ writeIORef solveTypeRef (Just MIP)
+
     problem <- askProblem
     controlRef <- asks _glpkMIPControl
     liftIO $ do
@@ -331,9 +353,17 @@ setVariableDomain' variable domain =
 
 evaluateVariable' :: Variable Glpk -> Glpk Double
 evaluateVariable' variable = do
-    problem <- askProblem
-    column <- readColumn variable
-    liftIO $ realToFrac <$> glp_get_col_prim problem column
+  lastSolveRef <- asks _glpkLastSolveType
+  lastSolve <- liftIO $ readIORef lastSolveRef
+  let method = case lastSolve of
+        Nothing -> glp_get_col_prim
+        Just LP -> glp_get_col_prim
+        Just MIP -> glp_mip_col_val
+        Just InteriorPoint -> glp_ipt_col_prim
+
+  problem <- askProblem
+  column <- readColumn variable
+  liftIO $ realToFrac <$> method problem column
 
 evaluateExpression'
   :: LinearExpr (Variable Glpk) Double
@@ -372,3 +402,9 @@ solutionStatus status
   | status == glpkNoFeasible = Infeasible
   | status == glpkUnbounded  = Unbounded
   | otherwise                = Error
+
+writeFormulation' :: FilePath -> Glpk ()
+writeFormulation' fileName = do
+  problem <- askProblem
+  _ <- liftIO $ withCString fileName (glp_write_lp problem nullPtr)
+  return ()

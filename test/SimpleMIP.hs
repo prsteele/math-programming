@@ -17,8 +17,10 @@ test_simple = testGroup "Simple MIP problems"
 simpleMIP :: (MonadIO m, LPMonad m Double) => m ()
 simpleMIP = do
   x <- addVariable `asKind` Integer `within` Interval 0 5
+  y <- addVariable `asKind` Continuous `within` Interval 0 5
   _ <- addConstraint (1 *: x .>= 1.1)
-  setObjective (1 *: x)
+  _ <- addConstraint (1 *: y .>= 1.1)
+  setObjective (1 *: x .+. 1 *: y)
   setSense Minimization
   _ <- optimizeLP
   status <- optimize
@@ -26,9 +28,13 @@ simpleMIP = do
   -- Check that we reached optimality
   liftIO $ status @?= Optimal
 
-  v <- evaluate x
-  let msg = printf "Expected x to be 2, but is %.3f" v
-  liftIO $ assertBool msg (abs (v - 2) <= 1e-1)
+  vx <- evaluate x
+  let xmsg = printf "Expected x to be 2, but is %.3f" vx
+  liftIO $ assertBool xmsg (abs (vx - 2) <= 1e-1)
+
+  vy <- evaluate y
+  let ymsg = printf "Expected y to be 1.1, but is %.3f" vy
+  liftIO $ assertBool ymsg (abs (vy - 1.1) <= 1e-1)
 
 simpleMIPGlpk :: IO ()
 simpleMIPGlpk = do

@@ -21,26 +21,11 @@ description:         Please see the README on GitHub at <https://github.com/prst
 
 dependencies:
   - base >= 4.7 && < 5
-  - glpk-hs >= 0.1.0.0 && < 0.2
   - mtl >= 2.2.2 && < 2.3
   - containers >= 0.5.11 && < 0.6
 
 library:
   source-dirs: src
-
-executables:
-  MathProgHs-exe:
-    main:                Main.hs
-    source-dirs:         app
-    ghc-options:
-      - -threaded
-      - -rtsopts
-      - -with-rtsopts=-N
-      - -Wall
-    extra-libraries:
-      - glpk
-    dependencies:
-      - MathProgHs
 
 tests:
   MathProgHs-test:

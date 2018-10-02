@@ -29,7 +29,6 @@ simpleMIP = do
 
   v <- evaluate x
   let msg = printf "Expected x to be 2, but is %.3f" v
-  writeFormulation "simplemip.lp"
   liftIO $ assertBool msg (abs (v - 2) <= 1e-1)
 
 simpleMIPGlpk :: IO ()

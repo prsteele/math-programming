@@ -1,21 +1,15 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 module Diet where
 
 import Control.Monad
 import Control.Monad.Except
-import Control.Monad.IO.Class
-import Control.Monad.Reader
-import Data.IORef
 import Test.Tasty
 import Test.Tasty.HUnit
 import Text.Printf
 
-import Foreign.C.String
-import Foreign.Ptr
-
 import Math.Programming
 import Math.Programming.Glpk
-import Math.Programming.Glpk.Header
 
 test_diet :: TestTree
 test_diet = testGroup "Diet problem"
@@ -38,7 +32,7 @@ data Nutrient = Calories | VitaminA
     , Show
     )
 
-basicDiet :: (MonadIO m, Numeric m ~ Double, LPMonad m) => m ()
+basicDiet :: (MonadIO m, LPMonad m Double) => m ()
 basicDiet =
   let
     cost :: Food -> Double
@@ -84,7 +78,7 @@ basicDiet =
     forM_ nutrients $ \nutrient -> do
       let lhs = sumExpr [nutrition nutrient food *: v | (food, v) <- amounts]
           (lower, upper) = nutrientBounds nutrient
-      (addConstraint $ lhs .<= upper) `named` (printf "%s_max" (show nutrient))
+      _ <- (addConstraint $ lhs .<= upper) `named` (printf "%s_max" (show nutrient))
       (addConstraint $ lhs .>= lower) `named` (printf "%s_min" (show nutrient))
 
     -- Set the objective
@@ -93,7 +87,7 @@ basicDiet =
     setSense Minimization
 
     -- Solve the problem
-    status <- optimize
+    status <- optimizeLP
 
     -- Check that we reached optimality
     liftIO $ status @?= Optimal
@@ -120,12 +114,8 @@ basicDiet =
 
 glpkBasicDiet :: IO ()
 glpkBasicDiet = do
-  glp_term_out glpkOff
-  problem <- glp_create_prob
-  env <- GlpkEnv problem <$> newIORef [] <*> newIORef []
-  result <- runReaderT (runExceptT (runGlpk basicDiet)) env
+  result <- runGlpk basicDiet
   case result of
-    Left error -> assertFailure (show error)
+    Left errorMsg -> assertFailure (show errorMsg)
     Right () -> return ()
-  liftIO $ withCString "example.lp" (glp_write_lp problem nullPtr)
   return ()

@@ -1,11 +1,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 module Math.Programming
   ( module Math.Programming.Expr
   , module Math.Programming.Inequality
-  , Variable (..)
   , Inequality (..)
   , Sense (..)
   , SolutionStatus (..)
@@ -21,24 +21,68 @@ module Math.Programming
 import Math.Programming.Expr
 import Math.Programming.Inequality
 
-class (Monad m, Num (Numeric m)) => LPMonad m where
+class (Monad m, Num b) => LPMonad m b | m -> b where
+  -- | The type of variables in the model. The LPMonad treats these as
+  -- opaque values, but instances may expose more details.
   data Variable m :: *
-  data Constraint m :: *
-  type Numeric m
 
+  -- | The type of constraints in the model. The LPMonad treats these
+  -- as opaque values, but instances may expose more details.
+  data Constraint m :: *
+
+  -- | Create a new decision variable in the model.
   addVariable :: m (Variable m)
+
+  -- | Name an existing decision variable in the model.
   nameVariable :: Variable m -> String -> m ()
+
+  -- | Delete a decision variable from the model. The variable should
+  -- no longer be used after being deleted.
   deleteVariable :: Variable m -> m ()
-  addConstraint :: Inequality (Variable m) (Numeric m) -> m (Constraint m)
+
+  -- | Add a constraint to the model represented by an inequality.
+  addConstraint :: Inequality (Variable m) b -> m (Constraint m)
+
+  -- | Name an existing constraint in the model.
   nameConstraint :: Constraint m -> String -> m ()
+
+  -- | Delete a constraint from the model. The constraint should no
+  -- longer be used after being deleted.
   deleteConstraint :: Constraint m -> m ()
-  setObjective :: LinearExpr (Variable m) (Numeric m) -> m ()
+
+  -- | Set the objective function of the model.
+  setObjective :: LinearExpr (Variable m) b -> m ()
+
+  -- | Set the optimization direction of the model.
   setSense :: Sense -> m ()
+
+  -- | Optimize the continuous relaxation of the model.
+  optimizeLP :: m SolutionStatus
+
+  -- | Optimize the mixed-integer program.
   optimize :: m SolutionStatus
-  setVariableBounds :: Variable m -> Bounds (Numeric m) -> m ()
+
+  -- | Set the optimization timeout, in seconds
+  setTimeout :: Double -> m ()
+
+  -- | Set the relative MIP gap tolerance
+  setRelativeMIPGap :: Double -> m ()
+
+  -- | Set the upper- or lower-bounds on a variable.
+  setVariableBounds :: Variable m -> Bounds b -> m ()
+
+  -- | Set the domain of a variable, i.e. whether it is continuous or
+  -- integral.
   setVariableDomain :: Variable m -> Domain -> m ()
-  evaluateVariable :: Variable m -> m (Numeric m)
-  evaluateExpression :: LinearExpr (Variable m) (Numeric m) -> m (Numeric m)
+
+  -- | Get the value of a variable in the current solution.
+  evaluateVariable :: Variable m -> m b
+
+  -- | Get the value of a linear expression in the current solution.
+  evaluateExpression :: LinearExpr (Variable m) b -> m b
+
+  -- | Write out the formulation.
+  writeFormulation :: FilePath -> m ()
 
 data Bounds b
   = NonNegativeReals
@@ -81,38 +125,38 @@ data SolutionStatus
     )
 
 -- | Constrain a variable to take on certain values.
-within :: (LPMonad m) => m (Variable m) -> Bounds (Numeric m) -> m (Variable m)
+within :: (LPMonad m b) => m (Variable m) -> Bounds b -> m (Variable m)
 within make bounds = do
   variable <- make
   setVariableBounds variable bounds
   return variable
 
 -- | Set the type of a variable.
-asKind :: (LPMonad m) => m (Variable m) -> Domain -> m (Variable m)
+asKind :: (LPMonad m b) => m (Variable m) -> Domain -> m (Variable m)
 asKind make domain = do
   variable <- make
   setVariableDomain variable domain
   return variable
 
-class (LPMonad m) => Eval m a where
-  evaluate :: a -> m (Numeric m)
+class (LPMonad m b) => Eval m a b where
+  evaluate :: a -> m b
 
-instance (LPMonad m) => Eval m (Variable m) where
+instance (LPMonad m b) => Eval m (Variable m) b where
   evaluate = evaluateVariable
 
-instance (LPMonad m, b ~ Numeric m) => Eval m (LinearExpr (Variable m) b) where
+instance (LPMonad m b) => Eval m (LinearExpr (Variable m) b) b where
   evaluate = evaluateExpression
 
-class (LPMonad m) => Named m a where
+class (LPMonad m b) => Named m a b where
   named :: m a -> String -> m a
 
-instance (LPMonad m) => Named m (Variable m) where
+instance (LPMonad m b) => Named m (Variable m) b where
   named mkVariable name = do
     variable <- mkVariable
     nameVariable variable name
     return variable
 
-instance (LPMonad m) => Named m (Constraint m) where
+instance (LPMonad m b) => Named m (Constraint m) b where
   named mkConstraint name = do
     constraint <- mkConstraint
     nameConstraint constraint name

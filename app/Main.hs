@@ -2,8 +2,6 @@
 module Main where
 
 import Control.Monad.Except
-import Control.Monad.Reader
-import Data.IORef
 import Foreign.C.String
 import Foreign.Ptr
 
@@ -11,7 +9,7 @@ import Math.Programming
 import Math.Programming.Glpk
 import Math.Programming.Glpk.Header
 
-simple :: (LPMonad m) => m (Numeric m, Numeric m, Numeric m)
+simple :: (LPMonad m b) => m (b, b, b)
 simple = do
   z <- addVariable `named` "toDelete"
 
@@ -30,7 +28,7 @@ simple = do
 
   setObjective objective
   setSense Minimization
-  optimize
+  _ <- optimize
 
   xVal <- evaluateVariable x
   yVal <- evaluate y
@@ -39,12 +37,13 @@ simple = do
 
 main :: IO ()
 main = do
-  problem <- glp_create_prob
-  env <- GlpkEnv problem <$> newIORef [] <*> newIORef []
+  result <- runGlpk $ do
+    result <- simple
+    problem <- askProblem
+    _ <- liftIO $ withCString "example.lp" (glp_write_lp problem nullPtr)
+    return result
 
-  result <- runReaderT (runExceptT (runGlpk simple)) env
   case result of
-    Left error -> print error
+    Left errorMsg -> print errorMsg
     Right (xVal, yVal, obj) -> print (xVal, yVal, obj)
-  withCString "example.lp" (glp_write_lp problem nullPtr)
   return ()

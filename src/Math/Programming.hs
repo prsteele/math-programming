@@ -6,7 +6,6 @@
 module Math.Programming
   ( module Math.Programming.Expr
   , module Math.Programming.Inequality
-  , Variable (..)
   , Inequality (..)
   , Sense (..)
   , SolutionStatus (..)

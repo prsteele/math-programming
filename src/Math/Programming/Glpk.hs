@@ -60,7 +60,6 @@ instance LPMonad Glpk Double where
   optimizeLP = optimizeLP'
   setVariableBounds = setVariableBounds'
   evaluateVariable = evaluateVariable'
-  evaluateExpression = evaluateExpression'
   setTimeout = setTimeout'
   writeFormulation = writeFormulation'
 
@@ -366,17 +365,6 @@ evaluateVariable' variable = do
   problem <- askProblem
   column <- readColumn variable
   liftIO $ realToFrac <$> method problem column
-
-evaluateExpression'
-  :: LinearExpr (Variable Glpk) Double
-  -> Glpk Double
-evaluateExpression' (LinearExpr terms constant) =
-  let
-    variables = fmap fst terms
-    coefs = fmap snd terms
-  in do
-    values <- mapM evaluate variables
-    return $ constant + sum (zipWith (*) values coefs)
 
 setTimeout' :: Double -> Glpk ()
 setTimeout' seconds =

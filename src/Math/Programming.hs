@@ -74,6 +74,13 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
 
   -- | Get the value of a linear expression in the current solution.
   evaluateExpression :: LinearExpr (Variable m) b -> m b
+  evaluateExpression (LinearExpr terms constant) =
+    let
+      variables = fmap fst terms
+      coefs = fmap snd terms
+    in do
+      values <- mapM evaluate variables
+      return $ constant + sum (zipWith (*) values coefs)
 
   -- | Write out the formulation.
   writeFormulation :: FilePath -> m ()

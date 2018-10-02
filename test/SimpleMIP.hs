@@ -14,8 +14,7 @@ test_simple = testGroup "Simple MIP problems"
   [ testCase "Simple MIP (GLPK)" simpleMIPGlpk
   ]
 
---simpleMIP :: (MonadIO m, LPMonad m Double) => m ()
-simpleMIP :: Glpk ()
+simpleMIP :: (MonadIO m, LPMonad m Double) => m ()
 simpleMIP = do
   x <- addVariable `asKind` Integer `within` Interval 0 5
   _ <- addConstraint (1 *: x .>= 1.1)

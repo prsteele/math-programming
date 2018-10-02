@@ -4,27 +4,33 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 module Math.Programming
-  ( module Math.Programming.Expr
-  , module Math.Programming.Inequality
-  , Inequality (..)
+  (
+    -- * Linear programs
+    LPMonad (..)
   , Sense (..)
-  , SolutionStatus (..)
-  , LPMonad (..)
-  , IPMonad (..)
   , Bounds (..)
-  , Domain (..)
   , within
-  , asKind
-  , Eval (..)
   , Named (..)
+    -- ** Building linear expressions
+  , module Math.Programming.Expr
+    -- ** Building constraints
+  , module Math.Programming.Inequality
+    -- ** Evaluating results
+  , Eval (..)
+  , SolutionStatus (..)
+    -- * Integer programs
+  , IPMonad (..)
+  , Domain (..)
+  , asKind
   ) where
 
 import Math.Programming.Expr
 import Math.Programming.Inequality
 
--- | A linear program.
+-- | A monad for formulating and solving linear programs.
 --
--- The parameter 'b' is the underlying numeric type being used.
+-- The parameter 'b' is the underlying numeric type being used; this
+-- will likely be the 'Double' type.
 class (Monad m, Num b) => LPMonad m b | m -> b where
   -- | The type of variables in the model. The LPMonad treats these as
   -- opaque values, but instances may expose more details.
@@ -35,23 +41,31 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
   data Constraint m :: *
 
   -- | Create a new decision variable in the model.
+  --
+  -- This variable will be initialized to be a non-negative continuous
+  -- variable.
   addVariable :: m (Variable m)
 
-  -- | Name an existing decision variable in the model.
+  -- | Associate a name with a decision variable.
   nameVariable :: Variable m -> String -> m ()
 
-  -- | Delete a decision variable from the model. The variable should
-  -- no longer be used after being deleted.
+  -- | Delete a decision variable from the model.
+  --
+  -- The variable cannot be used after being deleted.
   deleteVariable :: Variable m -> m ()
+
+  -- | Set the upper- or lower-bounds on a variable.
+  setVariableBounds :: Variable m -> Bounds b -> m ()
 
   -- | Add a constraint to the model represented by an inequality.
   addConstraint :: Inequality (Variable m) b -> m (Constraint m)
 
-  -- | Name an existing constraint in the model.
+  -- | Associate a name with a constraint.
   nameConstraint :: Constraint m -> String -> m ()
 
-  -- | Delete a constraint from the model. The constraint should no
-  -- longer be used after being deleted.
+  -- | Delete a constraint from the model.
+  --
+  -- The constraint cannot used after being deleted.
   deleteConstraint :: Constraint m -> m ()
 
   -- | Set the objective function of the model.
@@ -63,11 +77,8 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
   -- | Optimize the continuous relaxation of the model.
   optimizeLP :: m SolutionStatus
 
-  -- | Set the optimization timeout, in seconds
+  -- | Set the optimization timeout, in seconds.
   setTimeout :: Double -> m ()
-
-  -- | Set the upper- or lower-bounds on a variable.
-  setVariableBounds :: Variable m -> Bounds b -> m ()
 
   -- | Get the value of a variable in the current solution.
   evaluateVariable :: Variable m -> m b
@@ -87,37 +98,49 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
 
 -- | A (mixed) integer program.
 --
--- The parameter 'b' is the underlying numeric type being used.
+-- In addition to the methods of the 'LPMonad' class, this monad
+-- supports constraining variables to be either continuous or
+-- discrete.
 class LPMonad m b => IPMonad m b where
   -- | Optimize the mixed-integer program.
   optimizeIP :: m SolutionStatus
 
   -- | Set the domain of a variable, i.e. whether it is continuous or
-  -- integral.
+  -- discrete.
   setVariableDomain :: Variable m -> Domain -> m ()
 
-  -- | Set the relative MIP gap tolerance
+  -- | Set the relative MIP gap tolerance.
   setRelativeMIPGap :: Double -> m ()
 
+-- | An interval of the real numbers.
 data Bounds b
   = NonNegativeReals
+  -- ^ The interval @[0, Infinity]@
   | NonPositiveReals
+  -- ^ The interval @[-Infinity, 0]@
   | Interval b b
+  -- ^ Some interval @[a, b]@
   | Free
+  -- ^ The interval @[-Infinity, Infinity]@
   deriving
     ( Read
     , Show
     )
 
+-- | The type of values that a variable can take on.
 data Domain
   = Continuous
+  -- ^ The variable lies in the real numbers
   | Integer
+  -- ^ The variable lies in the integers
   | Binary
+  -- ^ The variable lies in the set @{0, 1}@.
   deriving
     ( Read
     , Show
     )
 
+-- | Whether a math program is minimizing or maximizing its objective.
 data Sense = Minimization | Maximization
   deriving
     ( Eq
@@ -126,12 +149,20 @@ data Sense = Minimization | Maximization
     , Show
     )
 
+-- | The final status of an optimization.
 data SolutionStatus
   = Optimal
+  -- ^ An optimal solution has been found.
   | Feasible
+  -- ^ A feasible solution has been found. The result may or may not
+  -- be optimal.
   | Infeasible
+  -- ^ The model has been proven to be infeasible.
   | Unbounded
+  -- ^ The model has been proven to be unbounded.
   | Error
+  -- ^ An error was encountered during the solve. Instance-specific
+  -- methods should be used to determine what occured.
   deriving
     ( Eq
     , Ord
@@ -153,6 +184,13 @@ asKind make domain = do
   setVariableDomain variable domain
   return variable
 
+-- | The class of objects that can contain numeric results from a math
+-- program.
+--
+-- The 'evaluate' method can be used to query the value of either a
+-- variable or a linear expression of variables from a math
+-- program. It is important to note that the results of 'evaluate'
+-- will only be meaningful after a call to an optimization routine.
 class (LPMonad m b) => Eval m a b where
   evaluate :: a -> m b
 
@@ -162,6 +200,10 @@ instance (LPMonad m b) => Eval m (Variable m) b where
 instance (LPMonad m b) => Eval m (LinearExpr (Variable m) b) b where
   evaluate = evaluateExpression
 
+-- | The class of objects that can be named by in a math program.
+--
+-- The 'named' method can be used to set the names of variables,
+-- constraints, and objectives.
 class (LPMonad m b) => Named m a b where
   named :: m a -> String -> m a
 

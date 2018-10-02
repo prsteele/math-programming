@@ -58,14 +58,16 @@ instance LPMonad Glpk Double where
   setObjective = setObjective'
   setSense = setSense'
   optimizeLP = optimizeLP'
-  optimize = optimize'
   setVariableBounds = setVariableBounds'
-  setVariableDomain = setVariableDomain'
   evaluateVariable = evaluateVariable'
   evaluateExpression = evaluateExpression'
   setTimeout = setTimeout'
-  setRelativeMIPGap = setRelativeMIPGap'
   writeFormulation = writeFormulation'
+
+instance IPMonad Glpk Double where
+  optimizeIP = optimizeIP'
+  setVariableDomain = setVariableDomain'
+  setRelativeMIPGap = setRelativeMIPGap'
 
 runGlpk :: Glpk a -> IO (Either GlpkError a)
 runGlpk glpk = do
@@ -303,8 +305,8 @@ optimizeLP' =
         result <- glp_simplex problem controlPtr
         convertResult problem result
 
-optimize' :: Glpk SolutionStatus
-optimize' =
+optimizeIP' :: Glpk SolutionStatus
+optimizeIP' =
   let
     convertResult :: Ptr Problem -> GlpkMIPStatus -> IO SolutionStatus
     convertResult problem result

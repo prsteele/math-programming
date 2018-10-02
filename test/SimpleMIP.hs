@@ -14,7 +14,7 @@ test_simple = testGroup "Simple MIP problems"
   [ testCase "Simple MIP (GLPK)" simpleMIPGlpk
   ]
 
-simpleMIP :: (MonadIO m, LPMonad m Double) => m ()
+simpleMIP :: (MonadIO m, IPMonad m Double) => m ()
 simpleMIP = do
   x <- addVariable `asKind` Integer `within` Interval 0 5
   y <- addVariable `asKind` Continuous `within` Interval 0 5
@@ -23,7 +23,7 @@ simpleMIP = do
   setObjective (1 *: x .+. 1 *: y)
   setSense Minimization
   _ <- optimizeLP
-  status <- optimize
+  status <- optimizeIP
 
   -- Check that we reached optimality
   liftIO $ status @?= Optimal

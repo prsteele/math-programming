@@ -9,7 +9,7 @@ import Math.Programming
 import Math.Programming.Glpk
 import Math.Programming.Glpk.Header
 
-simple :: (LPMonad m b) => m (b, b, b)
+simple :: (IPMonad m b) => m (b, b, b)
 simple = do
   z <- addVariable `named` "toDelete"
 
@@ -28,7 +28,7 @@ simple = do
 
   setObjective objective
   setSense Minimization
-  _ <- optimize
+  _ <- optimizeIP
 
   xVal <- evaluateVariable x
   yVal <- evaluate y

@@ -10,6 +10,7 @@ module Math.Programming
   , Sense (..)
   , SolutionStatus (..)
   , LPMonad (..)
+  , IPMonad (..)
   , Bounds (..)
   , Domain (..)
   , within
@@ -21,6 +22,9 @@ module Math.Programming
 import Math.Programming.Expr
 import Math.Programming.Inequality
 
+-- | A linear program.
+--
+-- The parameter 'b' is the underlying numeric type being used.
 class (Monad m, Num b) => LPMonad m b | m -> b where
   -- | The type of variables in the model. The LPMonad treats these as
   -- opaque values, but instances may expose more details.
@@ -59,21 +63,11 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
   -- | Optimize the continuous relaxation of the model.
   optimizeLP :: m SolutionStatus
 
-  -- | Optimize the mixed-integer program.
-  optimize :: m SolutionStatus
-
   -- | Set the optimization timeout, in seconds
   setTimeout :: Double -> m ()
 
-  -- | Set the relative MIP gap tolerance
-  setRelativeMIPGap :: Double -> m ()
-
   -- | Set the upper- or lower-bounds on a variable.
   setVariableBounds :: Variable m -> Bounds b -> m ()
-
-  -- | Set the domain of a variable, i.e. whether it is continuous or
-  -- integral.
-  setVariableDomain :: Variable m -> Domain -> m ()
 
   -- | Get the value of a variable in the current solution.
   evaluateVariable :: Variable m -> m b
@@ -83,6 +77,20 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
 
   -- | Write out the formulation.
   writeFormulation :: FilePath -> m ()
+
+-- | A (mixed) integer program.
+--
+-- The parameter 'b' is the underlying numeric type being used.
+class LPMonad m b => IPMonad m b where
+  -- | Optimize the mixed-integer program.
+  optimizeIP :: m SolutionStatus
+
+  -- | Set the domain of a variable, i.e. whether it is continuous or
+  -- integral.
+  setVariableDomain :: Variable m -> Domain -> m ()
+
+  -- | Set the relative MIP gap tolerance
+  setRelativeMIPGap :: Double -> m ()
 
 data Bounds b
   = NonNegativeReals
@@ -132,7 +140,7 @@ within make bounds = do
   return variable
 
 -- | Set the type of a variable.
-asKind :: (LPMonad m b) => m (Variable m) -> Domain -> m (Variable m)
+asKind :: (IPMonad m b) => m (Variable m) -> Domain -> m (Variable m)
 asKind make domain = do
   variable <- make
   setVariableDomain variable domain

@@ -1,3 +1,3 @@
-# Changelog for MathProgHs
+# Changelog for math-programming
 
 ## Unreleased changes

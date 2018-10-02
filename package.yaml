@@ -1,6 +1,6 @@
-name:                MathProgHs
+name:                math-programming
 version:             0.1.0.0
-github:              "prsteele/MathProgHs"
+github:              "prsteele/math-programming"
 license:             BSD3
 author:              "Patrick Steele"
 maintainer:          "steele.pat@gmail.com"
@@ -17,7 +17,7 @@ category:            Math
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/prsteele/MathProgHs#readme>
+description:         Please see the README on GitHub at <https://github.com/prsteele/math-programming#readme>
 
 dependencies:
   - base >= 4.7 && < 5
@@ -28,7 +28,7 @@ library:
   source-dirs: src
 
 tests:
-  MathProgHs-test:
+  math-programming-test:
     main:                Driver.hs
     source-dirs:         test
     ghc-options:
@@ -39,7 +39,7 @@ tests:
     extra-libraries:
       - glpk
     dependencies:
-      - MathProgHs
+      - math-programming
       - tasty >= 1.1.0.2 && < 1.2
       - tasty-discover >= 4.2.0 && < 4.3
       - tasty-hunit >= 0.10.0.1 && < 0.11

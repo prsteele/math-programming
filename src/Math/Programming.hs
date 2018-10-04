@@ -16,7 +16,6 @@ module Math.Programming
     -- ** Building constraints
   , module Math.Programming.Inequality
     -- ** Evaluating results
-  , Eval (..)
   , SolutionStatus (..)
     -- * Integer programs
   , IPMonad (..)
@@ -81,16 +80,16 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
   setTimeout :: Double -> m ()
 
   -- | Get the value of a variable in the current solution.
-  evaluateVariable :: Variable m -> m b
+  eval :: Variable m -> m b
 
   -- | Get the value of a linear expression in the current solution.
-  evaluateExpression :: LinearExpr (Variable m) b -> m b
-  evaluateExpression (LinearExpr terms constant) =
+  evalExpr :: LinearExpr (Variable m) b -> m b
+  evalExpr (LinearExpr terms constant) =
     let
       variables = fmap fst terms
       coefs = fmap snd terms
     in do
-      values <- mapM evaluate variables
+      values <- mapM eval variables
       return $ constant + sum (zipWith (*) values coefs)
 
   -- | Write out the formulation.
@@ -183,22 +182,6 @@ asKind make domain = do
   variable <- make
   setVariableDomain variable domain
   return variable
-
--- | The class of objects that can contain numeric results from a math
--- program.
---
--- The 'evaluate' method can be used to query the value of either a
--- variable or a linear expression of variables from a math
--- program. It is important to note that the results of 'evaluate'
--- will only be meaningful after a call to an optimization routine.
-class (LPMonad m b) => Eval m a b where
-  evaluate :: a -> m b
-
-instance (LPMonad m b) => Eval m (Variable m) b where
-  evaluate = evaluateVariable
-
-instance (LPMonad m b) => Eval m (LinearExpr (Variable m) b) b where
-  evaluate = evaluateExpression
 
 -- | The class of objects that can be named by in a math program.
 --

@@ -37,7 +37,7 @@ instance LPMonad MockLP Double where
                          )
   data Constraint MockLP = Constraint
 
-  evaluateVariable = getVar
+  eval = getVar
 
   addVariable = error "MockLP addVariable"
   nameVariable = error "MockLP nameVariable"
@@ -65,11 +65,7 @@ example = M.fromList
   , (Variable "z", 3)
   ]
 
-ex :: MockLP Double
-ex = do
-  evaluate (((1.0 :: Double) *: Variable "x" .+. 2.0 *: Variable "y"))
-
 constantTest :: IO ()
 constantTest = runMockLP example $ do
-  value <- ex
+  value <- evalExpr $ 1.0 *: Variable "x" .+. 2.0 *: Variable "y"
   liftIO $ value @?= 5.0

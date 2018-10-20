@@ -43,3 +43,4 @@ tests:
       - tasty >= 1.1.0.2 && < 1.2
       - tasty-discover >= 4.2.0 && < 4.3
       - tasty-hunit >= 0.10.0.1 && < 0.11
+      - tasty-quickcheck >= 0.10 && < 0.11

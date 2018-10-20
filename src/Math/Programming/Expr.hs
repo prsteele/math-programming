@@ -42,6 +42,10 @@ instance Functor (LinearExpr a) where
 instance Foldable (LinearExpr a) where
   foldr f z (LinearExpr terms _) = foldr f z (fmap snd terms)
 
+instance Traversable (LinearExpr a) where
+  traverse f (LinearExpr terms constant)
+    = LinearExpr <$> traverse (traverse f) terms <*> pure constant
+
 sumExpr :: (Num a) => [LinearExpr a b] -> LinearExpr a b
 sumExpr = mconcat
 

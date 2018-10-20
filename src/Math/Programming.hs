@@ -57,7 +57,7 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
   setVariableBounds :: Variable m -> Bounds b -> m ()
 
   -- | Add a constraint to the model represented by an inequality.
-  addConstraint :: Inequality (Variable m) b -> m (Constraint m)
+  addConstraint :: Inequality b (Variable m) -> m (Constraint m)
 
   -- | Associate a name with a constraint.
   nameConstraint :: Constraint m -> String -> m ()
@@ -68,7 +68,7 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
   deleteConstraint :: Constraint m -> m ()
 
   -- | Set the objective function of the model.
-  setObjective :: LinearExpr (Variable m) b -> m ()
+  setObjective :: LinearExpr b (Variable m) -> m ()
 
   -- | Set the optimization direction of the model.
   setSense :: Sense -> m ()

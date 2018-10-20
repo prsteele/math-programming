@@ -80,17 +80,11 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
   setTimeout :: Double -> m ()
 
   -- | Get the value of a variable in the current solution.
-  eval :: Variable m -> m b
+  getValue :: Variable m -> m b
 
   -- | Get the value of a linear expression in the current solution.
-  evalExpr :: LinearExpr (Variable m) b -> m b
-  evalExpr (LinearExpr terms constant) =
-    let
-      variables = fmap fst terms
-      coefs = fmap snd terms
-    in do
-      values <- mapM eval variables
-      return $ constant + sum (zipWith (*) values coefs)
+  evalExpr :: LinearExpr b (Variable m) -> m b
+  evalExpr expr = traverse getValue expr >>= return . eval
 
   -- | Write out the formulation.
   writeFormulation :: FilePath -> m ()

@@ -10,6 +10,7 @@ b'. For example, '.+.' adds two linear expressions together, while
 module Math.Programming.Expr where
 
 import Data.List (sortOn)
+import Data.Traversable (fmapDefault, foldMapDefault)
 
 -- | A linear expression containing variables of type @b@ and numeric
 -- coefficients of type @a@.
@@ -37,10 +38,10 @@ instance (Num a) => Monoid (LinearExpr a b) where
   mempty = LinearExpr [] 0
 
 instance Functor (LinearExpr a) where
-  fmap f (LinearExpr terms constant) = LinearExpr (fmap (fmap f) terms) constant
+  fmap = fmapDefault
 
 instance Foldable (LinearExpr a) where
-  foldr f z (LinearExpr terms _) = foldr f z (fmap snd terms)
+  foldMap = foldMapDefault
 
 instance Traversable (LinearExpr a) where
   traverse f (LinearExpr terms constant)

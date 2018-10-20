@@ -92,3 +92,6 @@ simplify (LinearExpr terms constant)
     reduce ((x, c): (x', c'): xs)
       | x == x'   = (x, c + c') : reduce xs
       | otherwise = (x, c) : reduce ((x', c'): xs)
+
+eval :: Num a => LinearExpr a a -> a
+eval (LinearExpr terms constant) = constant + sum (map (uncurry (*)) terms)

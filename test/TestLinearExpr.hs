@@ -1,71 +1,36 @@
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# Language FlexibleInstances #-}
 module TestLinearExpr where
 
-import Control.Monad.Reader
-import qualified Data.Map as M
+import Data.Ratio
 
 import Test.Tasty
-import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
 
-import Math.Programming
+import Math.Programming.Expr
 
-newtype MockLP a = MockLP { _runMockLP :: ReaderT (M.Map (Variable MockLP) Double) IO a }
+test_tree :: TestTree
+test_tree = testGroup "LinearExpression tests"
+  [ testProperty "Commutativity" commutativityProp ]
+
+type ExactExpr = LinearExpr (Ratio Integer) (Ratio Integer)
+
+instance Arbitrary ExactExpr where
+  arbitrary = LinearExpr <$> arbitrary <*> arbitrary
+
+newtype ShuffledAndUnshuffled
+  = ShuffledAndUnshuffled (ExactExpr, ExactExpr)
   deriving
-    ( Functor
-    , Applicative
-    , Monad
-    , MonadIO
-    , MonadReader (M.Map (Variable MockLP) Double)
+    ( Show
     )
 
-getVar :: Variable MockLP -> MockLP Double
-getVar var = asks (M.findWithDefault (read "NaN") var)
+instance Arbitrary ShuffledAndUnshuffled where
+  arbitrary = do
+    unshuffled@(LinearExpr terms constant) <- arbitrary
+    shuffledTerms <- shuffle terms
+    let shuffled = LinearExpr shuffledTerms constant
+    return $ ShuffledAndUnshuffled (unshuffled, shuffled)
 
-runMockLP :: M.Map (Variable MockLP) Double -> MockLP a -> IO a
-runMockLP vars actions = runReaderT (_runMockLP actions) vars
-
-instance LPMonad MockLP Double where
-  data Variable MockLP = Variable { fromVariable :: String }
-                       deriving
-                         ( Eq
-                         , Ord
-                         , Show
-                         )
-  data Constraint MockLP = Constraint
-
-  eval = getVar
-
-  addVariable = error "MockLP addVariable"
-  nameVariable = error "MockLP nameVariable"
-  deleteVariable = error "MockLP deleteVariable"
-  addConstraint = error "MockLP addConstraint"
-  nameConstraint = error "MockLP nameConstraint"
-  deleteConstraint = error "MockLP deleteConstraint"
-  setObjective = error "MockLP setObjective"
-  setSense = error "MockLP setSense"
-  optimizeLP = error "MockLP optimizeLP"
-  setVariableBounds = error "MockLP setVariableBounds"
-  setTimeout = error "MockLP setTimeout"
-  writeFormulation = error "MockLP writeFormulation"
-
-test_simple_expressions :: TestTree
-test_simple_expressions = testGroup "Simple expressions"
-  [ testCase "Constants" constantTest
-  ]
-
-example :: M.Map (Variable MockLP) Double
-example = M.fromList
-  [ (Variable "w", 0)
-  , (Variable "x", 1)
-  , (Variable "y", 2)
-  , (Variable "z", 3)
-  ]
-
-constantTest :: IO ()
-constantTest = runMockLP example $ do
-  value <- evalExpr $ 1.0 *: Variable "x" .+. 2.0 *: Variable "y"
-  liftIO $ value @?= 5.0
+commutativityProp :: ShuffledAndUnshuffled -> Bool
+commutativityProp (ShuffledAndUnshuffled (shuffled, unshuffled))
+  = eval shuffled == eval unshuffled

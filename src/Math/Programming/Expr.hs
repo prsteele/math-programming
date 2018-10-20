@@ -39,6 +39,9 @@ instance (Num a) => Monoid (LinearExpr a b) where
 instance Functor (LinearExpr a) where
   fmap f (LinearExpr terms constant) = LinearExpr (fmap (fmap f) terms) constant
 
+instance Foldable (LinearExpr a) where
+  foldr f z (LinearExpr terms _) = foldr f z (fmap snd terms)
+
 sumExpr :: (Num a) => [LinearExpr a b] -> LinearExpr a b
 sumExpr = mconcat
 

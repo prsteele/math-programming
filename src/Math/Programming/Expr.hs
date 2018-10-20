@@ -1,4 +1,3 @@
-{-# LANGUAGE InstanceSigs #-}
 {-| Symbolic linear expressions.
 
 This module defines operators to manipulate linear expressions. Note
@@ -36,6 +35,9 @@ instance (Num a) => Semigroup (LinearExpr a b) where
 
 instance (Num a) => Monoid (LinearExpr a b) where
   mempty = LinearExpr [] 0
+
+instance Functor (LinearExpr a) where
+  fmap f (LinearExpr terms constant) = LinearExpr (fmap (fmap f) terms) constant
 
 sumExpr :: (Num a) => [LinearExpr a b] -> LinearExpr a b
 sumExpr = mconcat

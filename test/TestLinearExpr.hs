@@ -15,6 +15,7 @@ test_tree = testGroup "LinearExpression tests"
   [ testProperty "Additive commutativity" commutativityProp
   , testProperty "Additive distributivity" additiveDistributivityProp
   , testProperty "Coefficient commutativity" coefficientCommutativityProp
+  , testProperty "Scalar multiplicative distributivity" multiplicativeDistributivityProp
   ]
 
 type ExactExpr = LinearExpr (Ratio Integer) (Ratio Integer)
@@ -68,3 +69,7 @@ coefficientCommutativityProp (ShuffledCoefficients (shuffled, unshuffled))
 additiveDistributivityProp :: ExactExpr -> ExactExpr -> ExactExpr -> Bool
 additiveDistributivityProp x y z
   = eval ((x .+. y) .+. z) == eval (x .+. (y .+. z))
+
+multiplicativeDistributivityProp :: Ratio Integer -> ExactExpr -> Bool
+multiplicativeDistributivityProp a x
+  = eval (a *. x) == eval (x .* a)

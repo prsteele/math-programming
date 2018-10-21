@@ -46,7 +46,10 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
   addVariable :: m (Variable m)
 
   -- | Associate a name with a decision variable.
-  nameVariable :: Variable m -> String -> m ()
+  setVariableName :: Variable m -> String -> m ()
+
+  -- | Retrieve the name of a variable.
+  getVariableName :: Variable m -> m String
 
   -- | Delete a decision variable from the model.
   --
@@ -56,11 +59,17 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
   -- | Set the upper- or lower-bounds on a variable.
   setVariableBounds :: Variable m -> Bounds b -> m ()
 
+  -- | Get the upper and lower-bounds on a variable.
+  getVariableBounds :: Variable m -> m (Bounds b)
+
   -- | Add a constraint to the model represented by an inequality.
   addConstraint :: Inequality b (Variable m) -> m (Constraint m)
 
   -- | Associate a name with a constraint.
-  nameConstraint :: Constraint m -> String -> m ()
+  setConstraintName :: Constraint m -> String -> m ()
+
+  -- Retrieve the name of the constraint.
+  getConstraintName :: Constraint m -> m String
 
   -- | Delete a constraint from the model.
   --
@@ -78,6 +87,9 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
 
   -- | Set the optimization timeout, in seconds.
   setTimeout :: Double -> m ()
+
+  -- | Get the optimization timeout, in seconds.
+  getTimeout :: m Double
 
   -- | Get the value of a variable in the current solution.
   getValue :: Variable m -> m b
@@ -102,8 +114,15 @@ class LPMonad m b => IPMonad m b where
   -- discrete.
   setVariableDomain :: Variable m -> Domain -> m ()
 
+  -- | Get the domain of a variable, i.e. whether it is continuous or
+  -- discrete.
+  getVariableDomain :: Variable m -> m Domain
+
   -- | Set the relative MIP gap tolerance.
   setRelativeMIPGap :: Double -> m ()
+
+  -- | Get the relative MIP gap tolerance.
+  getRelativeMIPGap :: m Double
 
 -- | An interval of the real numbers.
 data Bounds b
@@ -183,15 +202,20 @@ asKind make domain = do
 -- constraints, and objectives.
 class (LPMonad m b) => Named m a b where
   named :: m a -> String -> m a
+  getName :: a -> m String
 
 instance (LPMonad m b) => Named m (Variable m) b where
   named mkVariable name = do
     variable <- mkVariable
-    nameVariable variable name
+    setVariableName variable name
     return variable
+
+  getName = getVariableName
 
 instance (LPMonad m b) => Named m (Constraint m) b where
   named mkConstraint name = do
     constraint <- mkConstraint
-    nameConstraint constraint name
+    setConstraintName constraint name
     return constraint
+
+  getName = getConstraintName

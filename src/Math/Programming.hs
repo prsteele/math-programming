@@ -114,8 +114,15 @@ class LPMonad m b => IPMonad m b where
   -- discrete.
   setVariableDomain :: Variable m -> Domain -> m ()
 
+  -- | Get the domain of a variable, i.e. whether it is continuous or
+  -- discrete.
+  getVariableDomain :: Variable m -> m Domain
+
   -- | Set the relative MIP gap tolerance.
   setRelativeMIPGap :: Double -> m ()
+
+  -- | Get the relative MIP gap tolerance.
+  getRelativeMIPGap :: m Double
 
 -- | An interval of the real numbers.
 data Bounds b

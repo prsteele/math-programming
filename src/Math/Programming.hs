@@ -59,6 +59,9 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
   -- | Set the upper- or lower-bounds on a variable.
   setVariableBounds :: Variable m -> Bounds b -> m ()
 
+  -- | Get the upper and lower-bounds on a variable.
+  getVariableBounds :: Variable m -> m (Bounds b)
+
   -- | Add a constraint to the model represented by an inequality.
   addConstraint :: Inequality b (Variable m) -> m (Constraint m)
 
@@ -84,6 +87,9 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
 
   -- | Set the optimization timeout, in seconds.
   setTimeout :: Double -> m ()
+
+  -- | Get the optimization timeout, in seconds.
+  getTimeout :: m Double
 
   -- | Get the value of a variable in the current solution.
   getValue :: Variable m -> m b

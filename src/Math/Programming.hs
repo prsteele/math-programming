@@ -46,10 +46,10 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
   addVariable :: m (Variable m)
 
   -- | Associate a name with a decision variable.
-  nameVariable :: Variable m -> String -> m ()
+  setVariableName :: Variable m -> String -> m ()
 
   -- | Retrieve the name of a variable.
-  variableName :: Variable m -> m String
+  getVariableName :: Variable m -> m String
 
   -- | Delete a decision variable from the model.
   --
@@ -63,10 +63,10 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
   addConstraint :: Inequality b (Variable m) -> m (Constraint m)
 
   -- | Associate a name with a constraint.
-  nameConstraint :: Constraint m -> String -> m ()
+  setConstraintName :: Constraint m -> String -> m ()
 
   -- Retrieve the name of the constraint.
-  constraintName :: Constraint m -> m String
+  getConstraintName :: Constraint m -> m String
 
   -- | Delete a constraint from the model.
   --
@@ -194,15 +194,15 @@ class (LPMonad m b) => Named m a b where
 instance (LPMonad m b) => Named m (Variable m) b where
   named mkVariable name = do
     variable <- mkVariable
-    nameVariable variable name
+    setVariableName variable name
     return variable
 
-  getName = variableName
+  getName = getVariableName
 
 instance (LPMonad m b) => Named m (Constraint m) b where
   named mkConstraint name = do
     constraint <- mkConstraint
-    nameConstraint constraint name
+    setConstraintName constraint name
     return constraint
 
-  getName = constraintName
+  getName = getConstraintName

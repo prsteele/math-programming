@@ -12,7 +12,8 @@ import Math.Programming.Expr
 
 test_tree :: TestTree
 test_tree = testGroup "LinearExpression tests"
-  [ testProperty "Commutativity" commutativityProp
+  [ testProperty "Additive commutativity" commutativityProp
+  , testProperty "Additive distributivity" additiveDistributivityProp
   , testProperty "Coefficient commutativity" coefficientCommutativityProp
   ]
 
@@ -63,3 +64,7 @@ instance Arbitrary ShuffledCoefficients where
 coefficientCommutativityProp :: ShuffledCoefficients -> Bool
 coefficientCommutativityProp (ShuffledCoefficients (shuffled, unshuffled))
   = eval shuffled == eval unshuffled
+
+additiveDistributivityProp :: ExactExpr -> ExactExpr -> ExactExpr -> Bool
+additiveDistributivityProp x y z
+  = eval ((x .+. y) .+. z) == eval (x .+. (y .+. z))

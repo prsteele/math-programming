@@ -48,6 +48,9 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
   -- | Associate a name with a decision variable.
   nameVariable :: Variable m -> String -> m ()
 
+  -- | Retrieve the name of a variable.
+  variableName :: Variable m -> m String
+
   -- | Delete a decision variable from the model.
   --
   -- The variable cannot be used after being deleted.
@@ -61,6 +64,9 @@ class (Monad m, Num b) => LPMonad m b | m -> b where
 
   -- | Associate a name with a constraint.
   nameConstraint :: Constraint m -> String -> m ()
+
+  -- Retrieve the name of the constraint.
+  constraintName :: Constraint m -> m String
 
   -- | Delete a constraint from the model.
   --
@@ -183,6 +189,7 @@ asKind make domain = do
 -- constraints, and objectives.
 class (LPMonad m b) => Named m a b where
   named :: m a -> String -> m a
+  getName :: a -> m String
 
 instance (LPMonad m b) => Named m (Variable m) b where
   named mkVariable name = do
@@ -190,8 +197,12 @@ instance (LPMonad m b) => Named m (Variable m) b where
     nameVariable variable name
     return variable
 
+  getName = variableName
+
 instance (LPMonad m b) => Named m (Constraint m) b where
   named mkConstraint name = do
     constraint <- mkConstraint
     nameConstraint constraint name
     return constraint
+
+  getName = constraintName

@@ -174,7 +174,7 @@ data SolutionStatus
   -- ^ The model has been proven to be unbounded.
   | Error
   -- ^ An error was encountered during the solve. Instance-specific
-  -- methods should be used to determine what occured.
+  -- methods should be used to determine what occurred.
   deriving
     ( Eq
     , Ord

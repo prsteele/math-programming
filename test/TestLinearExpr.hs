@@ -1,21 +1,20 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# Language FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 module TestLinearExpr where
 
-import Control.Monad
-import Data.Ratio
+import           Control.Monad
+import           Data.Ratio
 
-import Test.Tasty
-import Test.Tasty.QuickCheck
+import           Test.Tasty
+import           Test.Tasty.QuickCheck
 
-import Math.Programming.Expr
+import           Math.Programming
 
 test_tree :: TestTree
 test_tree = testGroup "LinearExpression tests"
   [ testProperty "Additive commutativity" commutativityProp
   , testProperty "Additive associativity" additiveAssociativityProp
   , testProperty "Coefficient commutativity" coefficientCommutativityProp
-  , testProperty "Scalar multiplicative distributivity" multiplicativeDistributivityProp
   ]
 
 type ExactExpr = LinearExpr (Ratio Integer) (Ratio Integer)
@@ -68,8 +67,5 @@ coefficientCommutativityProp (ShuffledCoefficients (shuffled, unshuffled))
 
 additiveAssociativityProp :: ExactExpr -> ExactExpr -> ExactExpr -> Bool
 additiveAssociativityProp x y z
-  = eval ((x .+. y) .+. z) == eval (x .+. (y .+. z))
+  = eval ((x .+ y) .+ z) == eval (x .+ (y .+ z))
 
-multiplicativeDistributivityProp :: Ratio Integer -> ExactExpr -> Bool
-multiplicativeDistributivityProp a x
-  = eval (a *. x) == eval (x .* a)

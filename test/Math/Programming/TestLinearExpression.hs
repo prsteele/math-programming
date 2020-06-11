@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE FlexibleInstances #-}
-module TestLinearExpr where
+module Math.Programming.TestLinearExpression where
 
 import           Control.Monad
 import           Data.Ratio

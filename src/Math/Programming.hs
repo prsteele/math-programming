@@ -1,3 +1,9 @@
+{-| A library for modeling and solving linear and integer programs.
+
+This library is merely a frontend to various solver backends. At the
+time this was written, the only known supported backend is
+<https://github.com/prsteele/math-programming-glpk GLPK>.
+-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -6,15 +12,20 @@ module Math.Programming
   ( -- * Linear programs
     LPMonad (..)
   , Sense (..)
+  , SolutionStatus (..)
+  -- * (Mixed) integer programs
+  , IPMonad (..)
+  , Domain (..)
+  -- ** Utilities
   , Bounds (..)
-  , within
   , Named (..)
+  , within
+  , asKind
     -- * Building linear expressions
   , module Math.Programming.Expression
     -- * Building constraints
+  , module Math.Programming.Constraint
   ) where
-
-import           Data.Proxy
 
 import           Math.Programming.Constraint
 import           Math.Programming.Expression
@@ -61,7 +72,7 @@ class (Num (Numeric m), Monad m) => LPMonad m where
   -- | Associate a name with a constraint.
   setConstraintName :: Constraint m -> String -> m ()
 
-  -- Retrieve the name of the constraint.
+  -- | Retrieve the name of the constraint.
   getConstraintName :: Constraint m -> m String
 
   -- | Delete a constraint from the model.
@@ -79,10 +90,10 @@ class (Num (Numeric m), Monad m) => LPMonad m where
   optimizeLP :: m SolutionStatus
 
   -- | Set the optimization timeout, in seconds.
-  setTimeout :: Double -> m ()
+  setTimeout :: RealFrac a => a -> m ()
 
   -- | Get the optimization timeout, in seconds.
-  getTimeout :: m Double
+  getTimeout :: RealFrac a => m a
 
   -- | Get the value of a variable in the current solution.
   getValue :: Variable m -> m (Numeric m)
@@ -112,21 +123,21 @@ class LPMonad m => IPMonad m where
   getVariableDomain :: Variable m -> m Domain
 
   -- | Set the relative MIP gap tolerance.
-  setRelativeMIPGap :: Double -> m ()
+  setRelativeMIPGap :: RealFrac a => a -> m ()
 
   -- | Get the relative MIP gap tolerance.
-  getRelativeMIPGap :: m Double
+  getRelativeMIPGap :: RealFrac a => m a
 
 -- | An interval of the real numbers.
 data Bounds b
   = NonNegativeReals
-  -- ^ The interval @[0, Infinity]@
+  -- ^ The non-negative reals.
   | NonPositiveReals
-  -- ^ The interval @[-Infinity, 0]@
+  -- ^ The non-positive reals.
   | Interval b b
-  -- ^ Some interval @[a, b]@
+  -- ^ Any closed interval of the reals.
   | Free
-  -- ^ The interval @[-Infinity, Infinity]@
+  -- ^ Any real number.
   deriving
     ( Read
     , Show
@@ -172,7 +183,14 @@ within make bounds = do
 -- | The class of objects that can be named by in a math program.
 --
 -- The 'named' method can be used to set the names of variables,
--- constraints, and objectives.
+-- constraints, and objectives. For example,
+--
+-- @
+-- con :: 'LPMonad' m => 'Variable m' -> m ('Constraint' m)
+-- con x = 'addConstraint' (x '@>=#' 1) `named` \"C1\"
+-- @
+--
+-- create the constraint @X >= 1@ named "C1".
 class LPMonad m => Named m a where
   named :: m a -> String -> m a
   getName :: a -> m String
@@ -212,5 +230,3 @@ asKind make domain = do
   variable <- make
   setVariableDomain variable domain
   return variable
-
-

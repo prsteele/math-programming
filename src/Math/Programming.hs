@@ -1,13 +1,23 @@
-{-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies          #-}
-module Math.Programming where
+module Math.Programming
+  ( -- * Linear programs
+    LPMonad (..)
+  , Sense (..)
+  , Bounds (..)
+  , within
+  , Named (..)
+    -- * Building linear expressions
+  , module Math.Programming.Expression
+    -- * Building constraints
+  ) where
 
-import           Data.List        (sortOn)
-import           Data.Traversable (fmapDefault, foldMapDefault)
+import           Data.Proxy
 
+import           Math.Programming.Constraint
+import           Math.Programming.Expression
 
 -- | A monad for formulating and solving linear programs.
 class (Num (Numeric m), Monad m) => LPMonad m where
@@ -46,7 +56,7 @@ class (Num (Numeric m), Monad m) => LPMonad m where
   getVariableBounds :: Variable m -> m (Bounds (Numeric m))
 
   -- | Add a constraint to the model represented by an inequality.
-  addConstraint :: Inequality (Expr m) -> m (Constraint m)
+  addConstraint :: Inequality (LinearExpr (Numeric m) (Variable m)) -> m (Constraint m)
 
   -- | Associate a name with a constraint.
   setConstraintName :: Constraint m -> String -> m ()
@@ -60,7 +70,7 @@ class (Num (Numeric m), Monad m) => LPMonad m where
   deleteConstraint :: Constraint m -> m ()
 
   -- | Set the objective function of the model.
-  setObjective :: Expr m -> m ()
+  setObjective :: LinearExpr (Numeric m) (Variable m) -> m ()
 
   -- | Set the optimization direction of the model.
   setSense :: Sense -> m ()
@@ -78,7 +88,7 @@ class (Num (Numeric m), Monad m) => LPMonad m where
   getValue :: Variable m -> m (Numeric m)
 
   -- | Get the value of a linear expression in the current solution.
-  evalExpr :: Expr m -> m (Numeric m)
+  evalExpr :: LinearExpr (Numeric m) (Variable m) -> m (Numeric m)
   evalExpr expr = traverse getValue expr >>= return . eval
 
   -- | Write out the formulation.
@@ -106,9 +116,6 @@ class LPMonad m => IPMonad m where
 
   -- | Get the relative MIP gap tolerance.
   getRelativeMIPGap :: m Double
-
--- | Expressions in the LPMonad m.
-type Expr m = LinearExpr (Numeric m) (Variable m)
 
 -- | An interval of the real numbers.
 data Bounds b
@@ -206,132 +213,4 @@ asKind make domain = do
   setVariableDomain variable domain
   return variable
 
--- | A linear expression containing symbolic variables of type @b@ and
--- numeric coefficients of type @a@.
---
--- Using strings to denote variables and 'Double's as our numeric
--- type, we could express the term /3 x + 2 y + 1/ as
---
--- @
---   LinearExpr [(3, "x"), (2, "y")] 1
--- @
-data LinearExpr a b
-  = LinearExpr
-    { _terms    :: [(a, b)]
-    , _constant :: a
-    }
-  deriving
-    ( Read
-    , Show
-    )
 
-instance (Num a) => Semigroup (LinearExpr a b) where
-  (LinearExpr termsLhs constantLhs) <> (LinearExpr termsRhs constantRhs)
-    = LinearExpr (termsLhs <> termsRhs) (constantLhs + constantRhs)
-
-instance (Num a) => Monoid (LinearExpr a b) where
-  mempty = LinearExpr [] 0
-
-instance Functor (LinearExpr a) where
-  fmap = fmapDefault
-
-instance Foldable (LinearExpr a) where
-  foldMap = foldMapDefault
-
-instance Traversable (LinearExpr a) where
-  traverse f (LinearExpr terms constant)
-    = LinearExpr <$> traverse (traverse f) terms <*> pure constant
-
--- | Non-strict inequalities.
-data Inequality a
-  = Inequality Ordering a a
-  deriving
-    ( Read
-    , Show
-    )
-
-(.+) :: Num a => LinearExpr a b -> LinearExpr a b -> LinearExpr a b
-(LinearExpr terms constant) .+ (LinearExpr terms' constant')
-  = LinearExpr (terms <> terms') (constant + constant')
-infixl 6 .+
-
-(.-) :: Num a => LinearExpr a b -> LinearExpr a b -> LinearExpr a b
-x .- y = x .+ scale (-1) y
-infixl 6 .-
-
-scale :: Num a => a -> LinearExpr a b -> LinearExpr a b
-scale x (LinearExpr terms constant) = LinearExpr terms' constant'
-  where
-    terms' = (\(coef, symbol) -> (coef * x, symbol)) <$> terms
-    constant' = x * constant
-
-(.*) :: Num a => a -> b -> LinearExpr a b
-x .* y = LinearExpr [(x, y)] 0
-infixl 6 .*
-
-(./) :: Fractional a => b -> a -> LinearExpr a b
-x ./ y = LinearExpr [(1 / y, x)] 0
-infixl 6 ./
-
-sumExpr :: Num a => [LinearExpr a b] -> LinearExpr a b
-sumExpr = mconcat
-
--- | Combine equivalent terms by summing their coefficients
-simplify :: (Ord b, Num a) => LinearExpr a b -> LinearExpr a b
-simplify (LinearExpr terms constant)
-  = LinearExpr (reduce (sortOn snd terms)) constant
-  where
-    reduce []           = []
-    reduce ((c, x): []) = [(c, x)]
-    reduce ((c, x): (c', x'): xs)
-      | x == x'   = (c + c', x) : reduce xs
-      | otherwise = (c, x) : reduce ((c', x'): xs)
-
-eval :: Num a => LinearExpr a a -> a
-eval (LinearExpr terms constant) = constant + sum (map (uncurry (*)) terms)
-
-constantExpr :: a -> LinearExpr a b
-constantExpr = LinearExpr []
-
-zero :: Num a => LinearExpr a b
-zero = constantExpr 0
-
-one :: Num a => LinearExpr a b
-one = constantExpr 1
-
-(.<=) :: Expr m -> Expr m -> Inequality (Expr m)
-(.<=) = Inequality LT
-infix 4 .<=
-
-(.<=#) :: Expr m -> Numeric m -> Inequality (Expr m)
-x .<=# y = Inequality LT x (constantExpr y)
-infix 4 .<=#
-
-(.>=) :: Expr m -> Expr m -> Inequality (Expr m)
-(.>=) = Inequality GT
-infix 4 .>=
-
-(#<=.) :: Numeric m -> Expr m -> Inequality (Expr m)
-(#<=.) = flip (.>=#)
-infix 4 #<=.
-
-(.>=#) :: Expr m -> Numeric m -> Inequality (Expr m)
-x .>=# y = Inequality GT x (constantExpr y)
-infix 4 .>=#
-
-(#>=.) :: Numeric m -> Expr m -> Inequality (Expr m)
-(#>=.) = flip (.>=#)
-infix 4 #>=.
-
-
-(.==) :: Expr m -> Expr m -> Inequality (Expr m)
-(.==) = Inequality LT
-infix 4 .==
-
-(.==#) :: Expr m -> Numeric m -> Inequality (Expr m)
-x .==# y = Inequality LT x (constantExpr y)
-infix 4 .==#
-
-(#==.) :: Numeric m -> Expr m -> Inequality (Expr m)
-(#==.) = flip (.==#)
-infix 4 #==.

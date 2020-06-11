@@ -26,6 +26,8 @@ dependencies:
 
 library:
   source-dirs: src
+  ghc-options:
+    - -Wall
 
 tests:
   math-programming-test:

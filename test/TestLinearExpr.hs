@@ -15,6 +15,7 @@ test_tree = testGroup "LinearExpression tests"
   [ testProperty "Additive commutativity" commutativityProp
   , testProperty "Additive associativity" additiveAssociativityProp
   , testProperty "Coefficient commutativity" coefficientCommutativityProp
+  , testProperty "Simplification" simplifyProp
   ]
 
 type ExactExpr = LinearExpr (Ratio Integer) (Ratio Integer)
@@ -67,5 +68,7 @@ coefficientCommutativityProp (ShuffledCoefficients (shuffled, unshuffled))
 
 additiveAssociativityProp :: ExactExpr -> ExactExpr -> ExactExpr -> Bool
 additiveAssociativityProp x y z
-  = eval ((x .+ y) .+ z) == eval (x .+ (y .+ z))
+  = eval ((x .+. y) .+. z) == eval (x .+. (y .+. z))
 
+simplifyProp :: ExactExpr -> Bool
+simplifyProp x = eval x == eval (simplify x)

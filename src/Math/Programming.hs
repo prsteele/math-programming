@@ -4,10 +4,11 @@ This library is merely a frontend to various solver backends. At the
 time this was written, the only known supported backend is
 <https://github.com/prsteele/math-programming-glpk GLPK>.
 -}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE TypeFamilies           #-}
 module Math.Programming
   ( -- * Linear programs
     LPMonad (..)
@@ -18,9 +19,15 @@ module Math.Programming
   , Domain (..)
   -- ** Utilities
   , Bounds (..)
-  , Named (..)
   , within
   , asKind
+  , evalExpr
+  , named
+  , nameOf
+  , free
+  , bounded
+  , nonNeg
+  , nonPos
     -- * Building linear expressions
   , module Math.Programming.Expression
     -- * Building constraints
@@ -31,17 +38,24 @@ import           Math.Programming.Constraint
 import           Math.Programming.Expression
 
 -- | A monad for formulating and solving linear programs.
-class (Num (Numeric m), Monad m) => LPMonad m where
+--
+-- We manipulate linear programs and their settings using the
+-- 'Mutable' typeclass.
+class (Monad m, Num (Numeric m)) => LPMonad m where
   -- | The numeric type used in the model.
   type Numeric m :: *
 
-  -- | The type of variables in the model. The LPMonad treats these as
+  -- | The type of variables in the model. 'LPMonad' treats these as
   -- opaque values, but instances may expose more details.
   data Variable m :: *
 
-  -- | The type of constraints in the model. The LPMonad treats these
+  -- | The type of constraints in the model. 'LPMonad' treats these
   -- as opaque values, but instances may expose more details.
   data Constraint m :: *
+
+  -- | The type of objectives in the model. 'LPMonad' treats these
+  -- as opaque values, but instances may expose more details.
+  data Objective m :: *
 
   -- | Create a new decision variable in the model.
   --
@@ -49,58 +63,48 @@ class (Num (Numeric m), Monad m) => LPMonad m where
   -- variable.
   addVariable :: m (Variable m)
 
-  -- | Associate a name with a decision variable.
-  setVariableName :: Variable m -> String -> m ()
-
-  -- | Retrieve the name of a variable.
-  getVariableName :: Variable m -> m String
-
-  -- | Delete a decision variable from the model.
+  -- | Remove a decision variable from the model.
   --
   -- The variable cannot be used after being deleted.
-  deleteVariable :: Variable m -> m ()
+  removeVariable :: Variable m -> m ()
 
-  -- | Set the upper- or lower-bounds on a variable.
+  getVariableName :: Variable m -> m String
+
+  setVariableName :: Variable m -> String -> m ()
+
+  getVariableBounds :: Variable m -> m (Bounds (Numeric m))
+
   setVariableBounds :: Variable m -> Bounds (Numeric m) -> m ()
 
-  -- | Get the upper and lower-bounds on a variable.
-  getVariableBounds :: Variable m -> m (Bounds (Numeric m))
+  getVariableValue :: Variable m -> m (Numeric m)
 
   -- | Add a constraint to the model represented by an inequality.
   addConstraint :: Inequality (LinearExpr (Numeric m) (Variable m)) -> m (Constraint m)
 
-  -- | Associate a name with a constraint.
-  setConstraintName :: Constraint m -> String -> m ()
-
-  -- | Retrieve the name of the constraint.
-  getConstraintName :: Constraint m -> m String
-
-  -- | Delete a constraint from the model.
+  -- | Remove a constraint from the model.
   --
   -- The constraint cannot used after being deleted.
-  deleteConstraint :: Constraint m -> m ()
+  removeConstraint :: Constraint m -> m ()
 
-  -- | Set the objective function of the model.
-  setObjective :: LinearExpr (Numeric m) (Variable m) -> m ()
+  getConstraintName :: Constraint m -> m String
 
-  -- | Set the optimization direction of the model.
-  setSense :: Sense -> m ()
+  setConstraintName :: Constraint m -> String -> m ()
+
+  -- | Add a constraint to the model represented by an inequality.
+  addObjective :: LinearExpr (Numeric m) (Variable m) -> m (Objective m)
+
+  getObjectiveName :: Objective m -> m String
+
+  setObjectiveName :: Objective m -> String -> m ()
+
+  getObjectiveSense :: Objective m -> m Sense
+  setObjectiveSense :: Objective m -> Sense -> m ()
+
+  getTimeout :: m Double
+  setTimeout :: Double -> m ()
 
   -- | Optimize the continuous relaxation of the model.
   optimizeLP :: m SolutionStatus
-
-  -- | Set the optimization timeout, in seconds.
-  setTimeout :: RealFrac a => a -> m ()
-
-  -- | Get the optimization timeout, in seconds.
-  getTimeout :: RealFrac a => m a
-
-  -- | Get the value of a variable in the current solution.
-  getValue :: Variable m -> m (Numeric m)
-
-  -- | Get the value of a linear expression in the current solution.
-  evalExpr :: LinearExpr (Numeric m) (Variable m) -> m (Numeric m)
-  evalExpr expr = traverse getValue expr >>= return . eval
 
   -- | Write out the formulation.
   writeFormulation :: FilePath -> m ()
@@ -110,23 +114,28 @@ class (Num (Numeric m), Monad m) => LPMonad m where
 -- In addition to the methods of the 'LPMonad' class, this monad
 -- supports constraining variables to be either continuous or
 -- discrete.
-class LPMonad m => IPMonad m where
+class ( LPMonad m
+      ) => IPMonad m where
   -- | Optimize the mixed-integer program.
   optimizeIP :: m SolutionStatus
 
-  -- | Set the domain of a variable, i.e. whether it is continuous or
-  -- discrete.
+  getVariableDomain :: Variable m -> m Domain
   setVariableDomain :: Variable m -> Domain -> m ()
 
-  -- | Get the domain of a variable, i.e. whether it is continuous or
-  -- discrete.
-  getVariableDomain :: Variable m -> m Domain
+  getRelativeMIPGap :: m Double
+  setRelativeMIPGap :: Double -> m ()
 
-  -- | Set the relative MIP gap tolerance.
-  setRelativeMIPGap :: RealFrac a => a -> m ()
+free :: LPMonad m => m (Variable m)
+free = addVariable `within` Free
 
-  -- | Get the relative MIP gap tolerance.
-  getRelativeMIPGap :: RealFrac a => m a
+nonNeg :: LPMonad m => m (Variable m)
+nonNeg = addVariable `within` NonNegativeReals
+
+nonPos :: LPMonad m => m (Variable m)
+nonPos = addVariable `within` NonPositiveReals
+
+bounded :: LPMonad m => Numeric m -> Numeric m -> m (Variable m)
+bounded lo hi = within addVariable (Interval lo hi)
 
 -- | An interval of the real numbers.
 data Bounds b
@@ -175,41 +184,35 @@ data SolutionStatus
 
 -- | Constrain a variable to take on certain values.
 within :: LPMonad m => m (Variable m) -> Bounds (Numeric m) -> m (Variable m)
-within make bounds = do
-  variable <- make
+within makeVar bounds = do
+  variable <- makeVar
   setVariableBounds variable bounds
-  return variable
+  pure variable
 
--- | The class of objects that can be named by in a math program.
---
--- The 'named' method can be used to set the names of variables,
--- constraints, and objectives. For example,
---
--- @
--- con :: 'LPMonad' m => 'Variable m' -> m ('Constraint' m)
--- con x = 'addConstraint' (x '@>=#' 1) `named` \"C1\"
--- @
---
--- create the constraint @X >= 1@ named "C1".
-class LPMonad m => Named m a where
-  named :: m a -> String -> m a
+class Nameable m a where
   getName :: a -> m String
+  setName :: a -> String -> m ()
 
-instance LPMonad m => Named m (Variable m) where
-  named mkVariable name = do
-    variable <- mkVariable
-    setVariableName variable name
-    return variable
-
+instance LPMonad m => Nameable m (Variable m) where
   getName = getVariableName
+  setName = setVariableName
 
-instance LPMonad m => Named m (Constraint m) where
-  named mkConstraint name = do
-    constraint <- mkConstraint
-    setConstraintName constraint name
-    return constraint
-
+instance LPMonad m => Nameable m (Constraint m) where
   getName = getConstraintName
+  setName = setConstraintName
+
+instance LPMonad m => Nameable m (Objective m) where
+  getName = getObjectiveName
+  setName = setObjectiveName
+
+nameOf :: (Monad m, Nameable m a) => a -> m String
+nameOf = getName
+
+named :: (Monad m, Nameable m a) => m a -> String -> m a
+named make name = do
+  x <- make
+  setName x name
+  pure x
 
 -- | The type of values that a variable can take on.
 data Domain
@@ -229,4 +232,8 @@ asKind :: IPMonad m => m (Variable m) -> Domain -> m (Variable m)
 asKind make domain = do
   variable <- make
   setVariableDomain variable domain
-  return variable
+  pure variable
+
+-- | Get the value of a linear expression in the current solution.
+evalExpr :: LPMonad m => LinearExpr (Numeric m) (Variable m) -> m (Numeric m)
+evalExpr expr = traverse getVariableValue expr >>= return . eval

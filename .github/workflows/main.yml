@@ -1,0 +1,17 @@
+name: CI
+
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: fpco/stack-build-small
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build
+        run: stack --stack-root /home/stackage --allow-different-user build
+
+      - name: Test
+        run: stack --stack-root /home/stackage --allow-different-user test

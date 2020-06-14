@@ -1,27 +1,27 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# Language FlexibleInstances #-}
-module TestLinearExpr where
+{-# LANGUAGE FlexibleInstances #-}
+module Math.Programming.TestLinearExpression where
 
-import Control.Monad
-import Data.Ratio
+import           Control.Monad
+import           Data.Ratio
 
-import Test.Tasty
-import Test.Tasty.QuickCheck
+import           Test.Tasty
+import           Test.Tasty.QuickCheck
 
-import Math.Programming.Expr
+import           Math.Programming
 
 test_tree :: TestTree
 test_tree = testGroup "LinearExpression tests"
   [ testProperty "Additive commutativity" commutativityProp
   , testProperty "Additive associativity" additiveAssociativityProp
   , testProperty "Coefficient commutativity" coefficientCommutativityProp
-  , testProperty "Scalar multiplicative distributivity" multiplicativeDistributivityProp
+  , testProperty "Simplification" simplifyProp
   ]
 
-type ExactExpr = LinearExpr (Ratio Integer) (Ratio Integer)
+type ExactExpr = LinearExpression (Ratio Integer) (Ratio Integer)
 
 instance Arbitrary ExactExpr where
-  arbitrary = LinearExpr <$> arbitrary <*> arbitrary
+  arbitrary = LinearExpression <$> arbitrary <*> arbitrary
 
 -- | A pair of linear expressions, differing only by the ordering of
 -- the summands.
@@ -33,9 +33,9 @@ newtype ShuffledAndUnshuffled
 
 instance Arbitrary ShuffledAndUnshuffled where
   arbitrary = do
-    unshuffled@(LinearExpr terms constant) <- arbitrary
+    unshuffled@(LinearExpression terms constant) <- arbitrary
     shuffledTerms <- shuffle terms
-    let shuffled = LinearExpr shuffledTerms constant
+    let shuffled = LinearExpression shuffledTerms constant
     return $ ShuffledAndUnshuffled (unshuffled, shuffled)
 
 -- | Addition should be commutative.
@@ -53,13 +53,13 @@ newtype ShuffledCoefficients
 
 instance Arbitrary ShuffledCoefficients where
   arbitrary = do
-    unshuffled@(LinearExpr terms constant) <- arbitrary
+    unshuffled@(LinearExpression terms constant) <- arbitrary
     terms' <- forM terms $ \(x, y) -> do
       flipped <- arbitrary
       return $ if flipped
                then (y, x)
                else (x, y)
-    let shuffled = LinearExpr terms' constant
+    let shuffled = LinearExpression terms' constant
     return $ ShuffledCoefficients (shuffled, unshuffled)
 
 coefficientCommutativityProp :: ShuffledCoefficients -> Bool
@@ -70,6 +70,5 @@ additiveAssociativityProp :: ExactExpr -> ExactExpr -> ExactExpr -> Bool
 additiveAssociativityProp x y z
   = eval ((x .+. y) .+. z) == eval (x .+. (y .+. z))
 
-multiplicativeDistributivityProp :: Ratio Integer -> ExactExpr -> Bool
-multiplicativeDistributivityProp a x
-  = eval (a *. x) == eval (x .* a)
+simplifyProp :: ExactExpr -> Bool
+simplifyProp x = eval x == eval (simplify x)

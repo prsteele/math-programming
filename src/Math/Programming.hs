@@ -1,221 +1,273 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies #-}
+{-| A library for modeling and solving linear and integer programs.
+
+This library is merely a frontend to various solver backends. At the
+time this was written, the only known supported backend is
+<https://github.com/prsteele/math-programming-glpk GLPK>.
+-}
 module Math.Programming
-  (
-    -- * Linear programs
+  ( -- * Math programs
+    -- $mathprograms
+
+    -- ** Linear programs
     LPMonad (..)
-  , Sense (..)
+  , Expr
   , Bounds (..)
-  , within
-  , Named (..)
-    -- ** Building linear expressions
-  , module Math.Programming.Expr
-    -- ** Building constraints
-  , module Math.Programming.Inequality
-    -- ** Evaluating results
   , SolutionStatus (..)
-    -- * Integer programs
+  , Sense (..)
+
+    -- ** Integer programs
   , IPMonad (..)
   , Domain (..)
+
+    -- * Model-building DSL
+    -- $models
+
+    -- ** Creating variables
+    -- $variables
+
+    -- *** Continuous variables
+  , free
+  , nonNeg
+  , nonPos
+  , bounded
+  , within
+
+    -- *** Integer variables
+  , integer
+  , binary
+  , nonNegInteger
+  , nonPosInteger
   , asKind
+
+    -- ** Linear expressions
+    -- $expressions
+  , LinearExpression (..)
+  , eval
+  , simplify
+  , var
+  , con
+  , exprSum
+  , varSum
+
+    -- *** Addition
+    -- $addition
+  , (.+.)
+  , (@+@)
+  , (.+@)
+  , (@+.)
+  , (@+#)
+  , (#+@)
+  , (#+.)
+  , (.+#)
+
+    -- *** Subtraction
+    -- $subtraction
+  , (.-.)
+  , (@-@)
+  , (.-@)
+  , (@-.)
+  , (@-#)
+  , (#-@)
+  , (#-.)
+  , (.-#)
+
+    -- *** Multiplication
+    -- $multiplication
+  , (#*@)
+  , (@*#)
+  , (#*.)
+  , (.*#)
+
+    -- *** Division
+    -- $division
+  , (@/#)
+  , (./#)
+
+    -- ** Constraints
+    -- $constraints
+  , Inequality (..)
+
+    -- *** Less-than constraints
+    -- $lt
+  , (#<=@)
+  , (#<=.)
+  , (@<=#)
+  , (@<=@)
+  , (@<=.)
+  , (.<=#)
+  , (.<=@)
+  , (.<=.)
+
+    -- *** Greater-than constraints
+    -- $gt
+  , (#>=@)
+  , (#>=.)
+  , (@>=#)
+  , (@>=@)
+  , (@>=.)
+  , (.>=#)
+  , (.>=@)
+  , (.>=.)
+
+  -- *** Equality constraints
+  -- $eq
+  , (#==@)
+  , (#==.)
+  , (@==#)
+  , (@==@)
+  , (@==.)
+  , (.==#)
+  , (.==@)
+  , (.==.)
+
+    -- ** Specifying objectives
+  , minimize
+  , maximize
+
+    -- ** Utilities
+  , evalExpr
+  , named
+  , nameOf
   ) where
 
-import Math.Programming.Expr
-import Math.Programming.Inequality
+import           Math.Programming.Dsl
+import           Math.Programming.Types
 
--- | A monad for formulating and solving linear programs.
+-- $mathprograms
 --
--- The parameter 'b' is the underlying numeric type being used; this
--- will likely be the 'Double' type.
-class (Monad m, Num b) => LPMonad m b | m -> b where
-  -- | The type of variables in the model. The LPMonad treats these as
-  -- opaque values, but instances may expose more details.
-  data Variable m :: *
+-- The 'LPMonad' provides all the primitives necessary to formulate
+-- and solve linear programs; the 'IPMonad' provides the same for
+-- integer programs. However, you should not often need to use these
+-- APIs directly, as we provide more user-friendly functions wrapping
+-- these low-level functions below.
 
-  -- | The type of constraints in the model. The LPMonad treats these
-  -- as opaque values, but instances may expose more details.
-  data Constraint m :: *
-
-  -- | Create a new decision variable in the model.
-  --
-  -- This variable will be initialized to be a non-negative continuous
-  -- variable.
-  addVariable :: m (Variable m)
-
-  -- | Associate a name with a decision variable.
-  setVariableName :: Variable m -> String -> m ()
-
-  -- | Retrieve the name of a variable.
-  getVariableName :: Variable m -> m String
-
-  -- | Delete a decision variable from the model.
-  --
-  -- The variable cannot be used after being deleted.
-  deleteVariable :: Variable m -> m ()
-
-  -- | Set the upper- or lower-bounds on a variable.
-  setVariableBounds :: Variable m -> Bounds b -> m ()
-
-  -- | Get the upper and lower-bounds on a variable.
-  getVariableBounds :: Variable m -> m (Bounds b)
-
-  -- | Add a constraint to the model represented by an inequality.
-  addConstraint :: Inequality b (Variable m) -> m (Constraint m)
-
-  -- | Associate a name with a constraint.
-  setConstraintName :: Constraint m -> String -> m ()
-
-  -- Retrieve the name of the constraint.
-  getConstraintName :: Constraint m -> m String
-
-  -- | Delete a constraint from the model.
-  --
-  -- The constraint cannot used after being deleted.
-  deleteConstraint :: Constraint m -> m ()
-
-  -- | Set the objective function of the model.
-  setObjective :: LinearExpr b (Variable m) -> m ()
-
-  -- | Set the optimization direction of the model.
-  setSense :: Sense -> m ()
-
-  -- | Optimize the continuous relaxation of the model.
-  optimizeLP :: m SolutionStatus
-
-  -- | Set the optimization timeout, in seconds.
-  setTimeout :: Double -> m ()
-
-  -- | Get the optimization timeout, in seconds.
-  getTimeout :: m Double
-
-  -- | Get the value of a variable in the current solution.
-  getValue :: Variable m -> m b
-
-  -- | Get the value of a linear expression in the current solution.
-  evalExpr :: LinearExpr b (Variable m) -> m b
-  evalExpr expr = traverse getValue expr >>= return . eval
-
-  -- | Write out the formulation.
-  writeFormulation :: FilePath -> m ()
-
--- | A (mixed) integer program.
+-- $models
 --
--- In addition to the methods of the 'LPMonad' class, this monad
--- supports constraining variables to be either continuous or
--- discrete.
-class LPMonad m b => IPMonad m b where
-  -- | Optimize the mixed-integer program.
-  optimizeIP :: m SolutionStatus
+-- The functions in the 'LPMonad' and 'IPMonad' typeclasses are
+-- designed to interface with low-level solver backends. We provide a
+-- cleaner interface in the following sections.
 
-  -- | Set the domain of a variable, i.e. whether it is continuous or
-  -- discrete.
-  setVariableDomain :: Variable m -> Domain -> m ()
-
-  -- | Get the domain of a variable, i.e. whether it is continuous or
-  -- discrete.
-  getVariableDomain :: Variable m -> m Domain
-
-  -- | Set the relative MIP gap tolerance.
-  setRelativeMIPGap :: Double -> m ()
-
-  -- | Get the relative MIP gap tolerance.
-  getRelativeMIPGap :: m Double
-
--- | An interval of the real numbers.
-data Bounds b
-  = NonNegativeReals
-  -- ^ The interval @[0, Infinity]@
-  | NonPositiveReals
-  -- ^ The interval @[-Infinity, 0]@
-  | Interval b b
-  -- ^ Some interval @[a, b]@
-  | Free
-  -- ^ The interval @[-Infinity, Infinity]@
-  deriving
-    ( Read
-    , Show
-    )
-
--- | The type of values that a variable can take on.
-data Domain
-  = Continuous
-  -- ^ The variable lies in the real numbers
-  | Integer
-  -- ^ The variable lies in the integers
-  | Binary
-  -- ^ The variable lies in the set @{0, 1}@.
-  deriving
-    ( Read
-    , Show
-    )
-
--- | Whether a math program is minimizing or maximizing its objective.
-data Sense = Minimization | Maximization
-  deriving
-    ( Eq
-    , Ord
-    , Read
-    , Show
-    )
-
--- | The final status of an optimization.
-data SolutionStatus
-  = Optimal
-  -- ^ An optimal solution has been found.
-  | Feasible
-  -- ^ A feasible solution has been found. The result may or may not
-  -- be optimal.
-  | Infeasible
-  -- ^ The model has been proven to be infeasible.
-  | Unbounded
-  -- ^ The model has been proven to be unbounded.
-  | Error
-  -- ^ An error was encountered during the solve. Instance-specific
-  -- methods should be used to determine what occured.
-  deriving
-    ( Eq
-    , Ord
-    , Read
-    , Show
-    )
-
--- | Constrain a variable to take on certain values.
-within :: (LPMonad m b) => m (Variable m) -> Bounds b -> m (Variable m)
-within make bounds = do
-  variable <- make
-  setVariableBounds variable bounds
-  return variable
-
--- | Set the type of a variable.
-asKind :: (IPMonad m b) => m (Variable m) -> Domain -> m (Variable m)
-asKind make domain = do
-  variable <- make
-  setVariableDomain variable domain
-  return variable
-
--- | The class of objects that can be named by in a math program.
+-- $variables
 --
--- The 'named' method can be used to set the names of variables,
--- constraints, and objectives.
-class (LPMonad m b) => Named m a b where
-  named :: m a -> String -> m a
-  getName :: a -> m String
+-- 'LPMonad' provides 'addVariable' and 'setVariableBounds', and
+-- 'IPMonad' additionally provides 'setVariableDomain'. While
+-- sufficient to create your programs, you are encouraged to use the
+-- more natural functions below.
 
-instance (LPMonad m b) => Named m (Variable m) b where
-  named mkVariable name = do
-    variable <- mkVariable
-    setVariableName variable name
-    return variable
+-- $expressions
+--
+-- The module 'Math.Programming.LinearExpression' provides operators
+-- to build up 'LinearExpression' objects using declared variables.
 
-  getName = getVariableName
+-- $addition
+--
+-- We can summarize the addition operators with the table
+--
+-- +-----------------+--------+--------+------------------+
+-- |                 |Constant|Variable|    Expression    |
+-- +-----------------+--------+--------+------------------+
+-- |Constant         | '+'    | '#+@'  | '#+.'            |
+-- +-----------------+--------+--------+------------------+
+-- |Variable         | '@+#'  | '@+@'  | '@+.'            |
+-- +-----------------+--------+--------+------------------+
+-- |Expression       | '.+#'  | '.+@'  | '.+.'            |
+-- +-----------------+--------+--------+------------------+
 
-instance (LPMonad m b) => Named m (Constraint m) b where
-  named mkConstraint name = do
-    constraint <- mkConstraint
-    setConstraintName constraint name
-    return constraint
+-- $subtraction
+--
+-- We can summarize the subtraction operators with the table
+--
+-- +-----------------+--------+--------+------------------+
+-- |                 |Constant|Variable|    Expression    |
+-- +-----------------+--------+--------+------------------+
+-- |Constant         | '-'    | '#-@'  | '#-.'            |
+-- +-----------------+--------+--------+------------------+
+-- |Variable         | '@-#'  | '@-@'  | '@-.'            |
+-- +-----------------+--------+--------+------------------+
+-- |Expression       | '.-#'  | '.-@'  | '.-.'            |
+-- +-----------------+--------+--------+------------------+
 
-  getName = getConstraintName
+-- $multiplication
+--
+-- We can summarize the multiplication operators with the table
+--
+-- +-----------------+--------+--------+------------------+
+-- |                 |Constant|Variable|    Expression    |
+-- +-----------------+--------+--------+------------------+
+-- |Constant         | '*'    | '#*@'  | '#*.'            |
+-- +-----------------+--------+--------+------------------+
+-- |Variable         | '@*#'  |        |                  |
+-- +-----------------+--------+--------+------------------+
+-- |Expression       | '.*#'  |        |                  |
+-- +-----------------+--------+--------+------------------+
+--
+-- As there are few possibilities for valid multiplication, it can be
+-- convenient to define e.g. @.*@ or some other short operator as an
+-- alias for '#*@'.
+
+-- $division
+--
+-- We can summarize the multiplication operators with the table
+--
+-- +-----------------+--------+--------+------------------+
+-- |                 |Constant|Variable|    Expression    |
+-- +-----------------+--------+--------+------------------+
+-- |Constant         | '/'    |        |                  |
+-- +-----------------+--------+--------+------------------+
+-- |Variable         | '@/#'  |        |                  |
+-- +-----------------+--------+--------+------------------+
+-- |Expression       | './#'  |        |                  |
+-- +-----------------+--------+--------+------------------+
+--
+-- As there are few possibilities for valid division, it
+-- can be convenient to define e.g. @./@ or some other short operator
+-- as an alias for '@/#'.
+
+-- $constraints
+--
+-- The 'LPMonad' provides the 'addConstraint' function. However, you
+-- will typically use the operators below to directly apply
+-- constraints to the model. We follow the same conventions as with
+-- our arithmetic operators.
+
+-- $lt
+--
+-- We can summarize the various inquality operators in the following table.
+--
+-- +-----------------+--------+--------+------------------+
+-- |                 |Constant|Variable|    Expression    |
+-- +-----------------+--------+--------+------------------+
+-- |Constant         |        | '#<=@' | '#<=.'           |
+-- +-----------------+--------+--------+------------------+
+-- |Variable         | '@<=#' | '@<=@' | '@<=.'           |
+-- +-----------------+--------+--------+------------------+
+-- |Expression       | '.<=#' | '.<=@' | '.<=.'           |
+-- +-----------------+--------+--------+------------------+
+
+-- $gt
+--
+-- We can summarize the various inquality operators in the following table.
+--
+-- +-----------------+--------+--------+------------------+
+-- |                 |Constant|Variable|    Expression    |
+-- +-----------------+--------+--------+------------------+
+-- |Constant         |        | '#>=@' | '#>=.'           |
+-- +-----------------+--------+--------+------------------+
+-- |Variable         | '@>=#' | '@>=@' | '@>=.'           |
+-- +-----------------+--------+--------+------------------+
+-- |Expression       | '.>=#' | '.>=@' | '.>=.'           |
+-- +-----------------+--------+--------+------------------+
+
+-- $eq
+--
+-- We can summarize the various inquality operators in the following table.
+--
+-- +-----------------+--------+--------+------------------+
+-- |                 |Constant|Variable|    Expression    |
+-- +-----------------+--------+--------+------------------+
+-- |Constant         |        | '#==@' | '#==.'           |
+-- +-----------------+--------+--------+------------------+
+-- |Variable         | '@==#' | '@==@' | '@==.'           |
+-- +-----------------+--------+--------+------------------+
+-- |Expression       | '.==#' | '.==@' | '.==.'           |
+-- +-----------------+--------+--------+------------------+

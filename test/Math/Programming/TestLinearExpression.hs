@@ -18,10 +18,10 @@ test_tree = testGroup "LinearExpression tests"
   , testProperty "Simplification" simplifyProp
   ]
 
-type ExactExpr = LinearExpr (Ratio Integer) (Ratio Integer)
+type ExactExpr = LinearExpression (Ratio Integer) (Ratio Integer)
 
 instance Arbitrary ExactExpr where
-  arbitrary = LinearExpr <$> arbitrary <*> arbitrary
+  arbitrary = LinearExpression <$> arbitrary <*> arbitrary
 
 -- | A pair of linear expressions, differing only by the ordering of
 -- the summands.
@@ -33,9 +33,9 @@ newtype ShuffledAndUnshuffled
 
 instance Arbitrary ShuffledAndUnshuffled where
   arbitrary = do
-    unshuffled@(LinearExpr terms constant) <- arbitrary
+    unshuffled@(LinearExpression terms constant) <- arbitrary
     shuffledTerms <- shuffle terms
-    let shuffled = LinearExpr shuffledTerms constant
+    let shuffled = LinearExpression shuffledTerms constant
     return $ ShuffledAndUnshuffled (unshuffled, shuffled)
 
 -- | Addition should be commutative.
@@ -53,13 +53,13 @@ newtype ShuffledCoefficients
 
 instance Arbitrary ShuffledCoefficients where
   arbitrary = do
-    unshuffled@(LinearExpr terms constant) <- arbitrary
+    unshuffled@(LinearExpression terms constant) <- arbitrary
     terms' <- forM terms $ \(x, y) -> do
       flipped <- arbitrary
       return $ if flipped
                then (y, x)
                else (x, y)
-    let shuffled = LinearExpr terms' constant
+    let shuffled = LinearExpression terms' constant
     return $ ShuffledCoefficients (shuffled, unshuffled)
 
 coefficientCommutativityProp :: ShuffledCoefficients -> Bool

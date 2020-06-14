@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Build
-        run: stack --stack-root /home/stackage --allow-different-user build
+        run: stack --stack-root /home/stackage --allow-different-user build --pedantic
 
       - name: Test
-        run: stack --stack-root /home/stackage --allow-different-user test
+        run: stack --stack-root /home/stackage --allow-different-user test --pedantic

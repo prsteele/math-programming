@@ -41,6 +41,9 @@ module Math.Programming
 
     -- ** Linear expressions
     -- $expressions
+  , LinearExpression (..)
+  , eval
+  , simplify
   , var
   , con
   , exprSum
@@ -82,6 +85,7 @@ module Math.Programming
 
     -- ** Constraints
     -- $constraints
+  , Inequality (..)
 
     -- *** Less-than constraints
     -- $lt

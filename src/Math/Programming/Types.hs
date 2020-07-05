@@ -108,9 +108,6 @@ class (Monad m, Show (Numeric m), RealFrac (Numeric m)) => LPMonad m where
   -- | Optimize the continuous relaxation of the model.
   optimizeLP :: m SolutionStatus
 
-  -- | Write out the formulation.
-  writeFormulation :: FilePath -> m ()
-
 -- | A (mixed) integer program.
 --
 -- In addition to the methods of the 'LPMonad' class, this monad

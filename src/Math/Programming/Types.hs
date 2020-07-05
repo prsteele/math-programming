@@ -16,7 +16,7 @@ type Expr m = LinearExpression (Numeric m) (Variable m)
 --
 -- We manipulate linear programs and their settings using the
 -- 'Mutable' typeclass.
-class (Monad m, Num (Numeric m)) => LPMonad m where
+class (Monad m, Show (Numeric m), RealFrac (Numeric m)) => LPMonad m where
   -- | The numeric type used in the model.
   type Numeric m :: *
 
@@ -107,9 +107,6 @@ class (Monad m, Num (Numeric m)) => LPMonad m where
 
   -- | Optimize the continuous relaxation of the model.
   optimizeLP :: m SolutionStatus
-
-  -- | Write out the formulation.
-  writeFormulation :: FilePath -> m ()
 
 -- | A (mixed) integer program.
 --

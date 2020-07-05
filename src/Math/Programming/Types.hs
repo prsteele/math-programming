@@ -16,7 +16,7 @@ type Expr m = LinearExpression (Numeric m) (Variable m)
 --
 -- We manipulate linear programs and their settings using the
 -- 'Mutable' typeclass.
-class (Monad m, Num (Numeric m)) => LPMonad m where
+class (Monad m, Show (Numeric m), RealFrac (Numeric m)) => LPMonad m where
   -- | The numeric type used in the model.
   type Numeric m :: *
 

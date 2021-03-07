@@ -1,0 +1,3 @@
+#! /usr/bin/env nix-shell
+#! nix-shell -i bash ../nix/ci.nix
+cabal2nix . > math-programming.nix

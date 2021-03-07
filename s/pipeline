@@ -1,0 +1,15 @@
+#! /usr/bin/env nix-shell
+#! nix-shell --pure --quiet -i bash ../nix/ci.nix
+
+set -e
+
+echo "#"
+echo "# Verifying math-programming.nix is up to date..."
+echo "#"
+cabal2nix . | diff math-programming.nix -
+echo ""
+
+echo "#"
+echo "# Running tests..."
+echo "#"
+cabal test --test-show-details=streaming --test-options='--color=always' "$@"

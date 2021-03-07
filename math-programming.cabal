@@ -34,7 +34,7 @@ test-suite math-programming-test-suite
   type:              exitcode-stdio-1.0
   main-is:           Driver.hs
   hs-source-dirs:    test
-  ghc-options:       -threaded -with-rtsopts=-N
+  ghc-options:       -threaded -with-rtsopts=-N -Wall
   other-modules:     Math.Programming.TestLinearExpression
   build-depends:     base
                    , math-programming

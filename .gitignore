@@ -1,3 +1,6 @@
-.stack-work/
-math-programming.cabal
+# Emacs
 *~
+.dir-locals-2.el
+
+# Haskell
+dist-newstyle/

@@ -27,7 +27,6 @@ library
   ghc-options:       -Wall
   build-depends:     base       >=4.13    && <5
                    , math-programming
-                   , tasty
-                   , tasty-hunit
-                   , tasty-quickcheck
+                   , hspec
+                   , QuickCheck
                    , text

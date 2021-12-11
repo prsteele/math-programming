@@ -4,8 +4,7 @@ module Math.Programming.Tests.IP where
 
 import Control.Monad.IO.Class
 import Math.Programming
-import Test.Tasty
-import Test.Tasty.HUnit
+import Test.Hspec
 import Text.Printf
 
 makeIPTests ::
@@ -13,12 +12,10 @@ makeIPTests ::
   -- | The runner for the API being tested.
   (m () -> IO ()) ->
   -- | The resulting test suite.
-  TestTree
+  Spec
 makeIPTests runner =
-  testGroup
-    "IP problems"
-    [ testCase "Simple MIP" (runner simpleMIPTest)
-    ]
+  describe "IP problems" $ do
+    it "solves a simple MIP" (runner simpleMIPTest)
 
 -- | We solve a simple MIP of the form
 --
@@ -42,19 +39,17 @@ simpleMIPTest = do
   status <- optimizeIP
 
   -- Check that we reached optimality
-  liftIO $ status @?= Optimal
+  liftIO $ status `shouldBe` Optimal
+
+  let expectedX = 2
+      expectedY = 1.1
+      expectedObj = expectedX + expectedY
 
   vx <- getVariableValue x
-  let expectedX = 2
-      xmsg = printf "Expected x to be 2, but is %.3f" vx
-  liftIO $ assertBool xmsg (abs (vx - expectedX) <= 1e-3)
+  liftIO $ abs (vx - expectedX) `shouldSatisfy` (<= 1e-3)
 
   vy <- getVariableValue y
-  let expectedY = 1.1
-      ymsg = printf "Expected y to be 1.1, but is %.3f" vy
-  liftIO $ assertBool ymsg (abs (vy - expectedY) <= 1e-3)
+  liftIO $ abs (vy - expectedY) `shouldSatisfy` (<= 1e-3)
 
   vobj <- getObjectiveValue objective
-  let expectedObj = expectedX + expectedY
-      objMsg = printf "Expected optimal solution to be %f, but is %f" expectedObj vobj
-  liftIO $ assertBool objMsg (abs (vobj - expectedObj) <= 1e-3)
+  liftIO $ abs (vobj - expectedObj) `shouldSatisfy` (<= 1e-3)

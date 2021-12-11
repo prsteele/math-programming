@@ -32,13 +32,11 @@ library
 test-suite math-programming-test-suite
   default-language:  Haskell2010
   type:              exitcode-stdio-1.0
-  main-is:           Driver.hs
+  main-is:           Spec.hs
   hs-source-dirs:    test
   ghc-options:       -threaded -with-rtsopts=-N -Wall
-  other-modules:     Math.Programming.TestLinearExpression
+  other-modules:     Math.Programming.LinearExpressionSpec
   build-depends:     base
                    , math-programming
-                   , tasty
-                   , tasty-discover
-                   , tasty-hunit
-                   , tasty-quickcheck
+                   , hspec
+                   , QuickCheck

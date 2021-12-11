@@ -7,22 +7,19 @@ module Math.Programming.Tests.Api where
 import Control.Monad.IO.Class
 import Data.Functor (void)
 import Math.Programming
-import Test.Tasty
-import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck
+import Test.Hspec
+import Test.QuickCheck
 
 makeApiTests ::
   (Num (Numeric m), MonadIO m, LPMonad m) =>
   -- | The runner for the API being tested.
   (m () -> IO ()) ->
   -- | The resulting test suite.
-  TestTree
+  Spec
 makeApiTests runner =
-  testGroup
-    "API tests"
-    [ testCase "Set/get variable names" (runner setGetVariableName),
-      testCase "Set/get constraint names" (runner setGetConstraintName)
-    ]
+  describe "API tests" $ do
+    it "sets and gets variable names" (runner setGetVariableName)
+    it "sets and gets constraint names" (runner setGetConstraintName)
 
 -- | We should be able to set and retrieve variable names
 setGetVariableName :: (MonadIO m, LPMonad m) => m ()
@@ -32,7 +29,7 @@ setGetVariableName = do
   setVariableName x name
 
   vName <- getVariableName x
-  liftIO $ vName @?= name
+  liftIO $ vName `shouldBe` name
 
 -- | We should be able to set and retrieve constraint names
 setGetConstraintName :: (Num (Numeric m), MonadIO m, LPMonad m) => m ()
@@ -41,7 +38,7 @@ setGetConstraintName = do
   x <- free
   c <- (x @>=# 0) `named` name
   cName <- getConstraintName c
-  liftIO $ cName @?= name
+  liftIO $ cName `shouldBe` name
 
 data Action
   = AddVariable

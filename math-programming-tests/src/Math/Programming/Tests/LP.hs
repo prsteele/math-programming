@@ -6,8 +6,7 @@ module Math.Programming.Tests.LP where
 import Control.Monad
 import Control.Monad.IO.Class
 import Math.Programming
-import Test.Tasty
-import Test.Tasty.HUnit
+import Test.Hspec
 import Text.Printf
 
 makeLPTests ::
@@ -15,12 +14,10 @@ makeLPTests ::
   -- | The runner for the API being tested.
   (m () -> IO ()) ->
   -- | The resulting test suite.
-  TestTree
+  Spec
 makeLPTests runner =
-  testGroup
-    "LP problems"
-    [ testCase "Diet problem" (runner dietProblemTest)
-    ]
+  describe "LP problems" $ do
+    it "solves the diet problem" (runner dietProblemTest)
 
 data Food = Corn | Milk | Bread
   deriving
@@ -108,26 +105,13 @@ dietProblemTest =
         status <- optimizeLP
 
         -- Check that we reached optimality
-        liftIO $ status @?= Optimal
+        liftIO $ status `shouldBe` Optimal
 
         -- Check the variable values
         forM_ amounts $ \(food, v) -> do
           x <- getVariableValue v
-
-          let correct = expected food
-              msg =
-                printf
-                  "Amount of %s should be about %.2f, but is %.3f"
-                  (show food)
-                  correct
-                  x
-          liftIO $ assertBool msg (abs (x - correct) <= 1e-1)
+          liftIO $ abs (x - expected food) `shouldSatisfy` (<= 1e-1)
 
         -- Check the objective value
         objectiveValue <- evalExpr objectiveExpr
-        let msg =
-              printf
-                "Objective should be about %.2f, but is %.3f"
-                expectedCost
-                objectiveValue
-        liftIO $ assertBool msg (abs (objectiveValue - expectedCost) < 1e-1)
+        liftIO $ abs (objectiveValue - expectedCost) `shouldSatisfy` (<= 1e-1)

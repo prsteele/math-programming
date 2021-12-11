@@ -1,30 +1,27 @@
-module RegressionTests where
+module RegressionSpec where
 
 import Control.Monad.IO.Class
 import Math.Programming
 import Math.Programming.Glpk
-import Test.Tasty
-import Test.Tasty.HUnit
+import Test.Hspec
 
-test_tree :: TestTree
-test_tree =
-  testGroup
-    "Regression tests"
-    [ testCase "Free variables (LP)" testFreeVariablesLP,
-      testCase "Free variables (IP)" testFreeVariablesIP,
-      testCase "Infeasible (LP)" testInfeasibleLP,
-      testCase "Infeasible (IP)" testInfeasibleIP
-    ]
+spec :: Spec
+spec =
+  describe "Regression tests" $ do
+    it "solves an LP with free variables" testFreeVariablesLP
+    it "solves an IP with free variables" testFreeVariablesIP
+    it "finds an infeasible LP to be infeasible" testInfeasibleLP
+    it "finds an infeasible IP to be infeasible" testInfeasibleIP
 
 assertFeasible :: SolutionStatus -> Glpk ()
 assertFeasible result =
   liftIO $ case result of
-    Error -> assertFailure "Failed to solve program"
-    Unbounded -> assertFailure "Unbounded program"
-    Infeasible -> assertFailure "Infeasible program"
+    Error -> expectationFailure "Failed to solve program"
+    Unbounded -> expectationFailure "Unbounded program"
+    Infeasible -> expectationFailure "Infeasible program"
     _ -> pure ()
 
-testFreeVariablesLP :: Assertion
+testFreeVariablesLP :: IO ()
 testFreeVariablesLP = runGlpk $ do
   x <- free
   y <- free
@@ -40,11 +37,11 @@ testFreeVariablesLP = runGlpk $ do
   vy <- getVariableValue y
   vz <- getVariableValue z
 
-  liftIO $ 0 @=? vx
-  liftIO $ 3.1 @=? vy
-  liftIO $ -3.1 @=? vz
+  liftIO $ 0 `shouldBe` vx
+  liftIO $ 3.1 `shouldBe` vy
+  liftIO $ -3.1 `shouldBe` vz
 
-testFreeVariablesIP :: Assertion
+testFreeVariablesIP :: IO ()
 testFreeVariablesIP = runGlpk $ do
   x <- integer
   y <- integer
@@ -60,11 +57,11 @@ testFreeVariablesIP = runGlpk $ do
   vy <- getVariableValue y
   vz <- getVariableValue z
 
-  liftIO $ 0 @=? vx
-  liftIO $ 3 @=? vy
-  liftIO $ -3 @=? vz
+  liftIO $ 0 `shouldBe` vx
+  liftIO $ 3 `shouldBe` vy
+  liftIO $ -3 `shouldBe` vz
 
-testInfeasibleLP :: Assertion
+testInfeasibleLP :: IO ()
 testInfeasibleLP = runGlpk $ do
   x <- free
   _ <- x @>=# 2
@@ -72,9 +69,9 @@ testInfeasibleLP = runGlpk $ do
 
   status <- optimizeLP
 
-  liftIO $ Infeasible @=? status
+  liftIO $ Infeasible `shouldBe` status
 
-testInfeasibleIP :: Assertion
+testInfeasibleIP :: IO ()
 testInfeasibleIP = runGlpk $ do
   x <- integer
   _ <- x @>=# 2
@@ -82,4 +79,4 @@ testInfeasibleIP = runGlpk $ do
 
   status <- optimizeIP
 
-  liftIO $ Infeasible @=? status
+  liftIO $ Infeasible `shouldBe` status

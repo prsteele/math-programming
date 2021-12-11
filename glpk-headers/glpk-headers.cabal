@@ -28,12 +28,10 @@ library
 test-suite glpk-headers-haskell-test-suite
   default-language:  Haskell2010
   type:              exitcode-stdio-1.0
-  main-is:           Driver.hs
+  main-is:           Spec.hs
   hs-source-dirs:    test
   extra-libraries:   glpk
-  other-modules:     Diet
+  other-modules:     Math.Programming.Glpk.HeadersSpec
   build-depends:     base
                    , glpk-headers
-                   , tasty
-                   , tasty-discover
-                   , tasty-hunit
+                   , hspec

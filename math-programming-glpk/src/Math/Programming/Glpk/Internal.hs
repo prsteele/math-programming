@@ -103,7 +103,7 @@ withCleanup = flip finally
 
 withGlpkErrorHook :: (Ptr a -> IO CInt) -> Ptr a -> IO b -> IO b
 withGlpkErrorHook hook ptr actions =
-  bracket (mkHaskellCallback hook) freeHaskellFunPtr $ \hookPtr -> do
+  bracket (mkHaskellErrorHook hook) freeHaskellFunPtr $ \hookPtr -> do
     glp_error_hook hookPtr ptr
     actions
 

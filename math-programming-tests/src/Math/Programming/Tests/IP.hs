@@ -1,20 +1,24 @@
 {-# LANGUAGE FlexibleContexts #-}
+
 module Math.Programming.Tests.IP where
 
-import           Control.Monad.IO.Class
-import           Test.Tasty
-import           Test.Tasty.HUnit
-import           Text.Printf
+import Control.Monad.IO.Class
+import Math.Programming
+import Test.Tasty
+import Test.Tasty.HUnit
+import Text.Printf
 
-import           Math.Programming
-
-makeIPTests
-  :: (PrintfArg (Numeric m), RealFrac (Numeric m), MonadIO m, IPMonad m)
-  => (m () -> IO ())  -- ^ The runner for the API being tested.
-  -> TestTree         -- ^ The resulting test suite.
-makeIPTests runner = testGroup "IP problems"
-  [ testCase "Simple MIP" (runner simpleMIPTest)
-  ]
+makeIPTests ::
+  (PrintfArg (Numeric m), RealFrac (Numeric m), MonadIO m, IPMonad m) =>
+  -- | The runner for the API being tested.
+  (m () -> IO ()) ->
+  -- | The resulting test suite.
+  TestTree
+makeIPTests runner =
+  testGroup
+    "IP problems"
+    [ testCase "Simple MIP" (runner simpleMIPTest)
+    ]
 
 -- | We solve a simple MIP of the form
 --

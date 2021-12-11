@@ -24,8 +24,8 @@ library
   other-modules:     Math.Programming.Glpk.Internal
   ghc-options:       -Wall
   build-depends:     base             >=4.13  && <5
-                   , glpk-headers     >=0.5.1 && <0.6
-                   , math-programming >=0.5.0 && <0.6
+                   , glpk-headers     >=0.6 && <0.7
+                   , math-programming >=0.6 && <0.7
                    , mtl
                    , unliftio
 

@@ -1,6 +1,6 @@
 cabal-version:       >=1.10
 name:                math-programming-tests
-version:             0.4.0
+version:             0.6.0
 synopsis:            Utility functions for testing implementations of the math-programming library.
 description:         Please see the README on GitHub at <https://github.com/prsteele/math-programming-tests#readme>
 bug-reports:         https://github.com/prsteele/math-programming-tests/issues

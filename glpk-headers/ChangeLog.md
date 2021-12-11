@@ -1,6 +1,18 @@
-# Changelog for GlpkHs
+# Changelog for `glpk-headers`
 
-## Unreleased changes
+## [Unreleased]
+
+- The `mkHaskellErrorHook` function was added to
+  `Math.Programming.Glpk.Headers` to support writing GLPK error
+  handlers.
+
+- The `mkHaskellTermHook` function was added to
+  `Math.Programming.Glpk.Headers` to support writing GLPK terminal
+  callback hooks.
+
+- The `mkHaskellMIPCallback` function was added to
+  `Math.Programming.Glpk.Headers` to support writing MIP callback
+  functions.
 
 ## [0.5.0] -- 2021-03-07
 

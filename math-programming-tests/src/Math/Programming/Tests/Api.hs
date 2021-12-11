@@ -1,23 +1,28 @@
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module Math.Programming.Tests.Api where
 
-import           Control.Monad.IO.Class
-import           Test.Tasty
-import           Test.Tasty.HUnit
-import           Test.Tasty.QuickCheck
+import Control.Monad.IO.Class
+import Data.Functor (void)
+import Math.Programming
+import Test.Tasty
+import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
 
-import           Math.Programming
-
-makeApiTests
-  :: (Num (Numeric m), MonadIO m, LPMonad m)
-  => (m () -> IO ())  -- ^ The runner for the API being tested.
-  -> TestTree         -- ^ The resulting test suite.
-makeApiTests runner = testGroup "API tests"
-  [ testCase "Set/get variable names" (runner setGetVariableName)
-  , testCase "Set/get constraint names" (runner setGetConstraintName)
-  ]
+makeApiTests ::
+  (Num (Numeric m), MonadIO m, LPMonad m) =>
+  -- | The runner for the API being tested.
+  (m () -> IO ()) ->
+  -- | The resulting test suite.
+  TestTree
+makeApiTests runner =
+  testGroup
+    "API tests"
+    [ testCase "Set/get variable names" (runner setGetVariableName),
+      testCase "Set/get constraint names" (runner setGetConstraintName)
+    ]
 
 -- | We should be able to set and retrieve variable names
 setGetVariableName :: (MonadIO m, LPMonad m) => m ()
@@ -44,8 +49,8 @@ data Action
   | AddThenDeleteVariable
   | AddThenDeleteConstraint
   deriving
-    ( Enum
-    , Show
+    ( Enum,
+      Show
     )
 
 instance Arbitrary Action where
@@ -61,23 +66,27 @@ instance LPMonad m => Arbitrary (LPActions m) where
 lpActions :: LPMonad m => Int -> Gen (m ())
 lpActions remaining
   | remaining <= 0 = return (return ())
-  | otherwise      = do
-      action <- arbitrary
-      case action of
-        AddVariable
-          -> return (addVariable >> return ())
-        AddThenDeleteVariable
-          -> bindOver addVariable removeVariable <$> lpActions (remaining - 1)
-        _ -> return (return ())
+  | otherwise = do
+    action <- arbitrary
+    case action of
+      AddVariable ->
+        return (void addVariable)
+      AddThenDeleteVariable ->
+        bindOver addVariable removeVariable <$> lpActions (remaining - 1)
+      _ -> return (return ())
 
 -- | Execute the monadic bind (>>=), with some other actions taken in
 -- between.
-bindOver
-  :: (Monad m)
-  => m a         -- ^ The action providing the passed value
-  -> (a -> m b)  -- ^ The function to bind to
-  -> m ()        -- ^ The intermediate actions
-  -> m b         -- ^ The resulting value
+bindOver ::
+  (Monad m) =>
+  -- | The action providing the passed value
+  m a ->
+  -- | The function to bind to
+  (a -> m b) ->
+  -- | The intermediate actions
+  m () ->
+  -- | The resulting value
+  m b
 bindOver action fn intermediate = action >>= (\x -> intermediate >> fn x)
 
 arbitraryLPActionsProp :: LPActions m -> m ()

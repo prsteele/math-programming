@@ -1,8 +1,12 @@
-# Changelog for math-programming-glpk
+# Changelog for `math-programming-glpk`
 
 ## [Unreleased]
 
-### Update the package to work with Nix
+### Changed
+
+- Make the `Glpk` monad work with threaded runtimes. The underlying
+  library requires that GLPK environments be accessed from a single
+  thread, so we run the monad in bound threads.
 
 ## [0.4.1] -- 5 July 2020
 

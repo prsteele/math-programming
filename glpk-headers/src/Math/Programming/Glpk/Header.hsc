@@ -401,7 +401,9 @@ module Math.Programming.Glpk.Header
   , glp_term_hook
   , glp_error_hook
   -- ** Helper functions
-  , mkHaskellCallback
+  , mkHaskellErrorHook
+  , mkHaskellTermHook
+  , mkHaskellMIPCallback
   ) where
 
 import Data.Typeable
@@ -2770,4 +2772,10 @@ foreign import ccall "glp_error_hook" glp_error_hook
   -> IO ()
 
 foreign import ccall "wrapper"
-  mkHaskellCallback :: (Ptr a -> IO CInt) -> IO (FunPtr (Ptr a -> IO CInt))
+  mkHaskellErrorHook :: (Ptr a -> IO CInt) -> IO (FunPtr (Ptr a -> IO CInt))
+
+foreign import ccall "wrapper"
+  mkHaskellTermHook :: (Ptr a -> IO CInt) -> IO (FunPtr (Ptr a -> IO CInt))
+
+foreign import ccall "wrapper"
+  mkHaskellMIPCallback :: (Ptr (GlpkTree a) -> Ptr a -> IO ()) -> IO (FunPtr (Ptr (GlpkTree a) -> Ptr a -> IO ()))

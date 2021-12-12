@@ -2,7 +2,7 @@ cabal-version:       >=1.10
 name:                math-programming-tests
 version:             0.6.0
 synopsis:            Utility functions for testing implementations of the math-programming library.
-description:         Please see the README on GitHub at <https://github.com/prsteele/math-programming-tests#readme>
+description:         Please see the README on GitHub at <https://github.com/prsteele/math-programming#readme>
 bug-reports:         https://github.com/prsteele/math-programming-tests/issues
 license:             BSD3
 license-file:        LICENSE
@@ -15,7 +15,7 @@ extra-source-files:  README.md, ChangeLog.md
 
 source-repository head
   type:     git
-  location: https://github.com/prsteele/math-programming-tests
+  location: https://github.com/prsteele/math-programming
 
 library
   default-language:  Haskell2010
@@ -26,8 +26,8 @@ library
                    , Math.Programming.Tests.IP
   other-modules:
   ghc-options:       -Wall
-  build-depends:     base       >=4.13    && <5
-                   , math-programming
-                   , hspec
-                   , QuickCheck
-                   , text
+  build-depends:     base             >=4.13    && <5
+                   , math-programming >=0.6     && <0.7
+                   , hspec            >=2.7.10  && <2.8
+                   , QuickCheck       >=2.14.2  && <2.15
+                   , text             >=1.2.4.1 && <1.3

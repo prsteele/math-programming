@@ -23,11 +23,11 @@ library
   exposed-modules:   Math.Programming.Glpk
   other-modules:     Math.Programming.Glpk.Internal
   ghc-options:       -Wall
-  build-depends:     base             >=4.13  && <5
-                   , glpk-headers     >=0.6 && <0.7
-                   , math-programming >=0.6 && <0.7
-                   , mtl
-                   , unliftio
+  build-depends:     base             >=4.13   && <5
+                   , glpk-headers     >=0.6    && <0.7
+                   , math-programming >=0.6    && <0.7
+                   , mtl              >=2.2.2  && <2.3
+                   , unliftio         >=0.2.15 && <0.3
 
 test-suite math-programming-glpk-test-suite
   default-language:  Haskell2010
@@ -36,9 +36,9 @@ test-suite math-programming-glpk-test-suite
   other-modules:     Math.Programming.GlpkSpec
   hs-source-dirs:    test
   ghc-options:       -threaded -with-rtsopts=-N -Wall
-  build-depends:     base
-                   , math-programming-glpk
-                   , math-programming
-                   , math-programming-tests
-                   , unliftio
-                   , hspec
+  build-depends:     math-programming-glpk
+                   , base                   >=4.13   && <5
+                   , math-programming       >=0.6    && <0.7
+                   , math-programming-tests >=0.6    && <0.7
+                   , unliftio               >=0.2.15 && <0.3
+                   , hspec                  >=2.7.10 && <2.8

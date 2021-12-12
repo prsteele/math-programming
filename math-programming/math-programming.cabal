@@ -27,7 +27,7 @@ library
   build-depends:     base       >=4.13    && <5
                    , mtl        >=2.2.2   && <2.3
                    , containers >=0.6.2.1 && <0.7
-                   , text       >=1.2.4.0 && <1.3
+                   , text       >=1.2.4.1 && <1.3
 
 test-suite math-programming-test-suite
   default-language:  Haskell2010
@@ -36,7 +36,7 @@ test-suite math-programming-test-suite
   hs-source-dirs:    test
   ghc-options:       -threaded -with-rtsopts=-N -Wall
   other-modules:     Math.Programming.LinearExpressionSpec
-  build-depends:     base
-                   , math-programming
-                   , hspec
-                   , QuickCheck
+  build-depends:     math-programming
+                   , base       >=4.13   && <5
+                   , hspec      >=2.7.10 && <2.8
+                   , QuickCheck >=2.14.2 && <2.15

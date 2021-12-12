@@ -2,7 +2,7 @@ cabal-version:       >=1.10
 name:                math-programming
 version:             0.6.0
 synopsis:            A library for formulating and solving math programs.
-description:         Please see the README on GitHub at <https://github.com/prsteele/math-programming#readme>
+description:         Please see the README on GitHub at <https://github.com/prsteele/math-programming/blob/main/math-programming/README.md>
 bug-reports:         https://github.com/prsteele/math-programming/issues
 license:             BSD3
 license-file:        LICENSE

@@ -2,7 +2,7 @@ cabal-version:       >=1.10
 name:                glpk-headers
 version:             0.6.0
 synopsis:            Low-level Haskell bindings to the GLPK library
-description:         Please see the README on GitHub at <https://github.com/prsteele/math-programming#readme>
+description:         Please see the README on GitHub at <https://github.com/prsteele/math-programming/blob/main/glpk-headers/README.md>
 bug-reports:         https://github.com/prsteele/math-programming/issues
 license:             BSD3
 license-file:        LICENSE

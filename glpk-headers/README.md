@@ -7,4 +7,4 @@ translation from the GLPK header file.
 
 ## Requirements
 
-* GLPK >=4.62
+* GLPK >=4.65

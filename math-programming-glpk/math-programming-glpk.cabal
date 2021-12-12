@@ -2,7 +2,7 @@ cabal-version:       >=1.10
 name:                math-programming-glpk
 version:             0.6.0
 synopsis:            A GLPK backend to the math-programming library.
-description:         Please see the README on GitHub at <https://github.com/prsteele/math-programming-glpk#readme>
+description:         Please see the README on GitHub at <https://github.com/prsteele/math-programming/blob/main/math-programming-glpk/README.md>
 bug-reports:         https://github.com/prsteele/math-programming/issues
 license:             BSD3
 license-file:        LICENSE

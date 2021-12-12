@@ -4,7 +4,10 @@ import Control.Monad.IO.Class
 import Math.Programming
 import Math.Programming.Glpk
 import Math.Programming.Tests
+import Math.Programming.Tests.IP (simpleMIPTest)
+import Math.Programming.Tests.LP (dietProblemTest)
 import Test.Hspec
+import UnliftIO.Async
 
 spec :: Spec
 spec = do
@@ -15,6 +18,9 @@ spec = do
     it "solves an IP with free variables" testFreeVariablesIP
     it "finds an infeasible LP to be infeasible" testInfeasibleLP
     it "finds an infeasible IP to be infeasible" testInfeasibleIP
+
+  describe "Threaded runtime tests" $ do
+    it "can solve problems in parallel" testParallelSolves
 
 assertFeasible :: SolutionStatus -> Glpk ()
 assertFeasible result =
@@ -83,3 +89,17 @@ testInfeasibleIP = runGlpk $ do
   status <- optimizeIP
 
   liftIO $ Infeasible `shouldBe` status
+
+testParallelSolves :: IO ()
+testParallelSolves =
+  let problems =
+        [ dietProblemTest,
+          simpleMIPTest,
+          dietProblemTest,
+          simpleMIPTest,
+          dietProblemTest,
+          simpleMIPTest,
+          dietProblemTest,
+          simpleMIPTest
+        ]
+   in pooledMapConcurrently_ runGlpk problems

@@ -1,12 +1,15 @@
-module RegressionSpec where
+module Math.Programming.GlpkSpec where
 
 import Control.Monad.IO.Class
 import Math.Programming
 import Math.Programming.Glpk
+import Math.Programming.Tests
 import Test.Hspec
 
 spec :: Spec
-spec =
+spec = do
+  makeAllTests "GLPK" runGlpk
+
   describe "Regression tests" $ do
     it "solves an LP with free variables" testFreeVariablesLP
     it "solves an IP with free variables" testFreeVariablesIP

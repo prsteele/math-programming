@@ -20,7 +20,7 @@ makeAllTests ::
   -- | The resulting test suite.
   Spec
 makeAllTests apiName runner =
-  describe (printf "Math.Programming tests (%s)" apiName) $ do
+  describe (printf "Math.Programming API tests (%s backend)" apiName) $ do
     makeApiTests runner
     makeLPTests runner
     makeIPTests runner

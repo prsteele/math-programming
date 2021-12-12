@@ -1,9 +1,16 @@
 # math-programming
 
 This repository contains a number of Haskell packages used to solve
-math programming problems. The
-[`math-programming`](./math-programming/) package offers a generic
-high-level interface for defining math programs, which backends like
-[`math-programming-glpk`](./math-programming-glpk/) can use to compute
-solutions. The [`glpk-headers`](./glpk-headers/) offers low-level
-bindings the [GLPK](https://www.gnu.org/software/glpk/) solver.
+math programming problems.
+
+## Packages
+
+- [`math-programming`](./math-programming/), a high-level interface
+  for defining math programs.
+- [`math-programming-glpk`](./math-programming-glpk/), a solver
+  backend for [`math-programming`](./math-programming/) interfacing
+  with the [GLPK](https://www.gnu.org/software/glpk/) solver.
+- [`glpk-headers`](./glpk-headers/), low-level bindings the
+  [GLPK](https://www.gnu.org/software/glpk/) solver.
+- [`math-programming-tests`](./math-programming-tests/), helper
+  functions for defining tests for new solver backends.

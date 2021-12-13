@@ -1,10 +1,10 @@
-cabal-version:       >=1.10
+cabal-version:       2.4
 name:                glpk-headers
 version:             0.6.0
 synopsis:            Low-level Haskell bindings to the GLPK library
 description:         Please see the README on GitHub at <https://github.com/prsteele/math-programming/blob/main/glpk-headers/README.md>
 bug-reports:         https://github.com/prsteele/math-programming/issues
-license:             BSD3
+license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Patrick Steele
 maintainer:          steele.pat@gmail.com
@@ -22,8 +22,8 @@ library
   hs-source-dirs:    src
   exposed-modules:   Math.Programming.Glpk.Header
   extra-libraries:   glpk
-  build-depends:     base            >=4.13    && <5
-                   , derive-storable >=0.2.0.0 && <0.3
+  build-depends:     base            ^>=4.14.1.0
+                   , derive-storable ^>=0.2.0.0
 
 test-suite glpk-headers-haskell-test-suite
   default-language:  Haskell2010
@@ -33,5 +33,5 @@ test-suite glpk-headers-haskell-test-suite
   extra-libraries:   glpk
   other-modules:     Math.Programming.Glpk.HeadersSpec
   build-depends:     glpk-headers
-                   , base  >=4.13   && <5
-                   , hspec >=2.7.10 && <2.8
+                   , base  ^>=4.13
+                   , hspec ^>=2.7.10

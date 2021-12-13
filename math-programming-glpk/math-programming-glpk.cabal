@@ -1,10 +1,10 @@
-cabal-version:       >=1.10
+cabal-version:       2.4
 name:                math-programming-glpk
 version:             0.6.0
 synopsis:            A GLPK backend to the math-programming library.
 description:         Please see the README on GitHub at <https://github.com/prsteele/math-programming/blob/main/math-programming-glpk/README.md>
 bug-reports:         https://github.com/prsteele/math-programming/issues
-license:             BSD3
+license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Patrick Steele
 maintainer:          steele.pat@gmail.com
@@ -23,11 +23,12 @@ library
   exposed-modules:   Math.Programming.Glpk
   other-modules:     Math.Programming.Glpk.Internal
   ghc-options:       -Wall
-  build-depends:     base             >=4.13   && <5
-                   , glpk-headers     >=0.6    && <0.7
-                   , math-programming >=0.6    && <0.7
-                   , mtl              >=2.2.2  && <2.3
-                   , unliftio         >=0.2.15 && <0.3
+  build-depends:     base             ^>=4.14.1.0
+                   , glpk-headers     ^>=0.6
+                   , math-programming ^>=0.6
+                   , mtl              ^>=2.2.2
+                   , text             ^>=1.2.4.1
+                   , unliftio         ^>=0.2.15
 
 test-suite math-programming-glpk-test-suite
   default-language:  Haskell2010
@@ -37,8 +38,8 @@ test-suite math-programming-glpk-test-suite
   hs-source-dirs:    test
   ghc-options:       -threaded -with-rtsopts=-N -Wall
   build-depends:     math-programming-glpk
-                   , base                   >=4.13   && <5
-                   , math-programming       >=0.6    && <0.7
-                   , math-programming-tests >=0.6    && <0.7
-                   , unliftio               >=0.2.15 && <0.3
-                   , hspec                  >=2.7.10 && <2.8
+                   , base                   ^>=4.14.1.0
+                   , math-programming       ^>=0.6
+                   , math-programming-tests ^>=0.6
+                   , unliftio               ^>=0.2.15
+                   , hspec                  ^>=2.7.10

@@ -3,6 +3,9 @@
 -- This package allows both linear and mixed-integer programs to be solved.
 module Math.Programming.Glpk
   ( Glpk,
+    GlpkVariable,
+    GlpkConstraint,
+    GlpkObjective,
     runGlpk,
     writeFormulation,
 

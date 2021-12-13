@@ -1,23 +1,22 @@
-{-| A library for modeling and solving linear and integer programs.
-
-This library is merely a frontend to various solver backends. At the
-time this was written, the only known supported backend is
-<https://github.com/prsteele/math-programming-glpk GLPK>.
--}
+-- | A library for modeling and solving linear and integer programs.
+--
+-- This library is merely a frontend to various solver backends. At the
+-- time this was written, the only known supported backend is
+-- <https://github.com/prsteele/math-programming-glpk GLPK>.
 module Math.Programming
   ( -- * Math programs
     -- $mathprograms
 
     -- ** Linear programs
-    LPMonad (..)
-  , Expr
-  , Bounds (..)
-  , SolutionStatus (..)
-  , Sense (..)
+    LPMonad (..),
+    Expr,
+    Bounds (..),
+    SolutionStatus (..),
+    Sense (..),
 
     -- ** Integer programs
-  , IPMonad (..)
-  , Domain (..)
+    IPMonad (..),
+    Domain (..),
 
     -- * Model-building DSL
     -- $models
@@ -26,112 +25,112 @@ module Math.Programming
     -- $variables
 
     -- *** Continuous variables
-  , free
-  , nonNeg
-  , nonPos
-  , bounded
-  , within
+    free,
+    nonNeg,
+    nonPos,
+    bounded,
+    within,
 
     -- *** Integer variables
-  , integer
-  , binary
-  , nonNegInteger
-  , nonPosInteger
-  , asKind
+    integer,
+    binary,
+    nonNegInteger,
+    nonPosInteger,
+    asKind,
 
     -- ** Linear expressions
     -- $expressions
-  , LinearExpression (..)
-  , eval
-  , simplify
-  , var
-  , con
-  , exprSum
-  , varSum
+    LinearExpression (..),
+    eval,
+    simplify,
+    var,
+    con,
+    exprSum,
+    varSum,
 
     -- *** Addition
     -- $addition
-  , (.+.)
-  , (@+@)
-  , (.+@)
-  , (@+.)
-  , (@+#)
-  , (#+@)
-  , (#+.)
-  , (.+#)
+    (.+.),
+    (@+@),
+    (.+@),
+    (@+.),
+    (@+#),
+    (#+@),
+    (#+.),
+    (.+#),
 
     -- *** Subtraction
     -- $subtraction
-  , (.-.)
-  , (@-@)
-  , (.-@)
-  , (@-.)
-  , (@-#)
-  , (#-@)
-  , (#-.)
-  , (.-#)
+    (.-.),
+    (@-@),
+    (.-@),
+    (@-.),
+    (@-#),
+    (#-@),
+    (#-.),
+    (.-#),
 
     -- *** Multiplication
     -- $multiplication
-  , (#*@)
-  , (@*#)
-  , (#*.)
-  , (.*#)
+    (#*@),
+    (@*#),
+    (#*.),
+    (.*#),
 
     -- *** Division
     -- $division
-  , (@/#)
-  , (./#)
+    (@/#),
+    (./#),
 
     -- ** Constraints
     -- $constraints
-  , Inequality (..)
+    Inequality (..),
 
     -- *** Less-than constraints
     -- $lt
-  , (#<=@)
-  , (#<=.)
-  , (@<=#)
-  , (@<=@)
-  , (@<=.)
-  , (.<=#)
-  , (.<=@)
-  , (.<=.)
+    (#<=@),
+    (#<=.),
+    (@<=#),
+    (@<=@),
+    (@<=.),
+    (.<=#),
+    (.<=@),
+    (.<=.),
 
     -- *** Greater-than constraints
     -- $gt
-  , (#>=@)
-  , (#>=.)
-  , (@>=#)
-  , (@>=@)
-  , (@>=.)
-  , (.>=#)
-  , (.>=@)
-  , (.>=.)
+    (#>=@),
+    (#>=.),
+    (@>=#),
+    (@>=@),
+    (@>=.),
+    (.>=#),
+    (.>=@),
+    (.>=.),
 
-  -- *** Equality constraints
-  -- $eq
-  , (#==@)
-  , (#==.)
-  , (@==#)
-  , (@==@)
-  , (@==.)
-  , (.==#)
-  , (.==@)
-  , (.==.)
+    -- *** Equality constraints
+    -- $eq
+    (#==@),
+    (#==.),
+    (@==#),
+    (@==@),
+    (@==.),
+    (.==#),
+    (.==@),
+    (.==.),
 
     -- ** Specifying objectives
-  , minimize
-  , maximize
+    minimize,
+    maximize,
 
     -- ** Utilities
-  , evalExpr
-  , named
-  , nameOf
-  ) where
+    evalExpr,
+    -- named,
+  )
+where
 
-import           Math.Programming.Dsl
-import           Math.Programming.Types
+import Math.Programming.Dsl
+import Math.Programming.Types
 
 -- $mathprograms
 --

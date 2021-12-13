@@ -1,16 +1,18 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Math.Programming.Tests.LP where
 
 import Control.Monad
 import Control.Monad.IO.Class
+import qualified Data.Text as T
 import Math.Programming
 import Test.Hspec
 import Text.Printf
 
 makeLPTests ::
-  (PrintfArg (Numeric m), RealFrac (Numeric m), MonadIO m, LPMonad m) =>
+  (MonadIO m, LPMonad v c o m) =>
   -- | The runner for the API being tested.
   (m () -> IO ()) ->
   -- | The resulting test suite.
@@ -35,14 +37,14 @@ data Nutrient = Calories | VitaminA
       Show
     )
 
-dietProblemTest :: forall m. (PrintfArg (Numeric m), RealFrac (Numeric m), MonadIO m, LPMonad m) => m ()
+dietProblemTest :: (MonadIO m, LPMonad v c o m) => m ()
 dietProblemTest =
-  let cost :: Food -> Numeric m
+  let cost :: Food -> Double
       cost Corn = 0.18
       cost Milk = 0.23
       cost Bread = 0.05
 
-      nutrition :: Nutrient -> Food -> Numeric m
+      nutrition :: Nutrient -> Food -> Double
       nutrition Calories Corn = 72
       nutrition VitaminA Corn = 107
       nutrition Calories Milk = 121
@@ -56,50 +58,53 @@ dietProblemTest =
       nutrients :: [Nutrient]
       nutrients = [Calories, VitaminA]
 
-      maxServings :: Numeric m
+      maxServings :: Double
       maxServings = 10
 
-      nutrientBounds :: Nutrient -> (Numeric m, Numeric m)
+      nutrientBounds :: Nutrient -> (Double, Double)
       nutrientBounds Calories = (2000, 2250)
       nutrientBounds VitaminA = (5000, 50000)
 
-      expected :: Food -> Numeric m
+      expected :: Food -> Double
       expected Corn = 1.94
       expected Milk = 10
       expected Bread = 10
 
-      expectedCost :: Numeric m
+      expectedCost :: Double
       expectedCost = 3.15
 
-      amountInterval :: Bounds (Numeric m)
+      amountInterval :: Bounds
       amountInterval = Interval 0 maxServings
 
-      amountName :: Food -> String
-      amountName food = printf "amount[%s]" (show food)
+      amountName :: Food -> T.Text
+      amountName food = T.pack $ printf "amount[%s]" (show food)
 
-      nutrientMaxName :: Nutrient -> String
-      nutrientMaxName nutrient = printf "%s_max" (show nutrient)
+      nutrientMaxName :: Nutrient -> T.Text
+      nutrientMaxName nutrient = T.pack $ printf "%s_max" (show nutrient)
 
-      nutrientMinName :: Nutrient -> String
-      nutrientMinName nutrient = printf "%s_min" (show nutrient)
+      nutrientMinName :: Nutrient -> T.Text
+      nutrientMinName nutrient = T.pack $ printf "%s_min" (show nutrient)
    in do
         -- Create the decision variables
         amounts <- forM foods $ \food -> do
-          v <- addVariable `within` amountInterval `named` amountName food
+          v <- free `within` amountInterval
+          setVariableName v (amountName food)
           return (food, v)
 
         -- Create the nutrient constraints
         forM_ nutrients $ \nutrient -> do
           let lhs = exprSum [nutrition nutrient food #*@ v | (food, v) <- amounts]
               (lower, upper) = nutrientBounds nutrient
-          _ <- (lhs .<=# upper) `named` nutrientMaxName nutrient
-          _ <- (lhs .>=# lower) `named` nutrientMinName nutrient
+          cl <- lhs .<=# upper
+          setConstraintName cl (nutrientMaxName nutrient)
+          cu <- lhs .>=# lower
+          setConstraintName cu (nutrientMinName nutrient)
           pure ()
 
         -- Set the objective
         let objectiveExpr = exprSum [cost food #*@ v | (food, v) <- amounts]
         objective <- addObjective objectiveExpr
-        setObjectiveSense objective Minimization
+        setSense objective Minimization
 
         -- Solve the problem
         status <- optimizeLP

@@ -3,6 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
@@ -15,7 +16,7 @@ import Control.Monad.Except
 import Control.Monad.Reader
 import Data.Functor
 import Data.IORef
-import Data.List
+import qualified Data.Text as T
 import Data.Typeable
 import Data.Void
 import Foreign.C.String
@@ -28,11 +29,73 @@ import Math.Programming.Glpk.Header
 import UnliftIO.Concurrent
 import UnliftIO.Exception
 
+-- | A reference to a GLPK variable.
+type GlpkVariable = GlpkPtr Column
+
+-- | A reference to a GLPK constraint.
+type GlpkConstraint = GlpkPtr Row
+
+-- | A placeholder for an objective.
+--
+-- GLPK supports only single-objective problems, and so no indices
+-- need to be stored.
+newtype GlpkObjective = GlpkObjective ()
+
+-- | An interface to the low-level GLPK API.
+--
+-- High-level solver settings can be modified by altering the
+-- 'SimplexMethodControlParameters' and 'MIPControlParameters' values
+-- for LP and IP solves, respectively.
+data GlpkEnv = GlpkEnv
+  { -- | A pointer to the Problem object. Most GLPK routines take this
+    -- as the first argument.
+    _glpkEnvProblem :: Ptr Problem,
+    -- | The variables in the model
+    _glpkVariables :: IORef [GlpkVariable],
+    -- | The next unique ID to assign to a variable.
+    _glpkNextVariableId :: IORef Integer,
+    -- | The constraints in the model
+    _glpkConstraints :: IORef [GlpkConstraint],
+    -- | The next unique ID to assign to a variable.
+    _glpkNextConstraintId :: IORef Integer,
+    -- | The control parameters for the simplex method
+    _glpkSimplexControl :: IORef SimplexMethodControlParameters,
+    -- | The control parameters for the MIP solver
+    _glpkMIPControl :: IORef (MIPControlParameters Void),
+    -- | The type of the last solve. This is needed to know whether to
+    -- retrieve simplex, interior point, or MIP solutions.
+    _glpkLastSolveType :: IORef (Maybe SolveType)
+  }
+
+-- | A pointer to an IORef, labeled by a unique value.
+--
+-- Although variables and constraints are labeled interally as
+-- integers, GLPK will re-use integer labels when variables or
+-- constraints are deleted and new ones are added. To ensure that we
+-- do not confuse objects, we mark all created variables and
+-- constraints with a unique integer value.
+data GlpkPtr a = GlpkPtr
+  { -- | The unique identifier of this reference.
+    --
+    -- Objects of this type, when generated, will have a fresh '_refId' value.
+    _glpkPtrId :: Integer,
+    -- | Whether this reference has been deleted from the problem.
+    _glpkPtrDeleted :: IORef Bool,
+    -- | The referenced object.
+    _glpkPtrRef :: IORef a
+  }
+
+instance Eq (GlpkPtr a) where
+  (GlpkPtr x _ _) == (GlpkPtr y _ _) = x == y
+
+instance Ord (GlpkPtr a) where
+  compare (GlpkPtr x _ _) (GlpkPtr y _ _) = compare x y
+
 -- | An error that GLPK can encounter.
 data GlpkException
-  = UnknownVariable GlpkVariable
-  | UnknownCode String CInt
-  | GlpkFailure String
+  = UnknownVariable
+  | UnknownCode T.Text CInt
+  | GlpkFailure T.Text
   deriving
     ( Show,
       Typeable
@@ -50,56 +113,37 @@ newtype Glpk a = Glpk {_runGlpk :: ReaderT GlpkEnv IO a}
       MonadReader GlpkEnv
     )
 
-instance LPMonad Glpk where
-  type Numeric Glpk = Double
-
-  data Variable Glpk = Variable {fromVariable :: GlpkVariable}
-    deriving
-      ( Eq,
-        Ord,
-        Show
-      )
-
-  data Constraint Glpk = Constraint {fromConstraint :: GlpkConstraint}
-    deriving
-      ( Eq,
-        Ord,
-        Show
-      )
-
-  data Objective Glpk = Objective
-
+instance LPMonad GlpkVariable GlpkConstraint GlpkObjective Glpk where
   addVariable = addVariable'
-  removeVariable = removeVariable'
+  deleteVariable = deleteVariable'
   getVariableName = getVariableName'
   setVariableName = setVariableName'
-  getVariableBounds = getVariableBounds'
-  setVariableBounds = setVariableBounds'
   getVariableValue = getVariableValue'
+  getBounds = getVariableBounds'
+  setBounds = setVariableBounds'
   addConstraint = addConstraint'
-  removeConstraint = removeConstraint'
+  deleteConstraint = deleteConstraint'
   getConstraintName = getConstraintName'
   setConstraintName = setConstraintName'
-  getDualValue = getDualValue'
+  getConstraintValue = getDualValue
+
   addObjective = addObjective'
+  getObjectiveValue = getObjectiveValue'
+  getSense = getSense'
+  setSense = setSense'
   getObjectiveName = getObjectiveName'
   setObjectiveName = setObjectiveName'
-  getObjectiveSense = getObjectiveSense'
-  setObjectiveSense = setObjectiveSense'
-  getObjectiveValue = getObjectiveValue'
+
   getTimeout = getTimeout'
   setTimeout = setTimeout'
   optimizeLP = optimizeLP'
 
-instance IPMonad Glpk where
-  optimizeIP = optimizeIP'
-  getVariableDomain = getVariableDomain'
-  setVariableDomain = setVariableDomain'
+instance IPMonad GlpkVariable GlpkConstraint GlpkObjective Glpk where
+  getDomain = getVariableDomain'
+  setDomain = setVariableDomain'
   getRelativeMIPGap = getRelativeMIPGap'
   setRelativeMIPGap = setRelativeMIPGap'
-
-withCleanup :: IO b -> IO a -> IO a
-withCleanup = flip finally
+  optimizeIP = optimizeIP'
 
 withGlpkErrorHook :: (Ptr a -> IO CInt) -> Ptr a -> IO b -> IO b
 withGlpkErrorHook hook ptr actions =
@@ -118,12 +162,32 @@ runGlpk program =
           1 -> throwIO (GlpkFailure "GLPK already initialized")
           2 -> throwIO (GlpkFailure "GLPK failed to initialize; not enough memory")
           3 -> throwIO (GlpkFailure "GLPK failed to initialize; unsupported programming model")
-          r -> throwIO (GlpkFailure ("GLPK failed to initialize; unknown status code " <> show r))
+          r -> throwIO (GlpkFailure ("GLPK failed to initialize; unknown status code " <> T.pack (show r)))
    in runInBoundThread $
         withGlpkEnv $
-          withCleanup removeGlpkErrorHook $
+          flip finally removeGlpkErrorHook $
             withGlpkErrorHook (const glp_free_env) nullPtr $
               runGlpk' program
+
+getDefaultSimplexControlParameters :: IO SimplexMethodControlParameters
+getDefaultSimplexControlParameters = do
+  params <- alloca $ \simplexControlPtr -> do
+    glp_init_smcp simplexControlPtr
+    peek simplexControlPtr
+
+  -- Turn on presolve. Users can simply turn this off before the first
+  -- optimization call if they desire.
+  pure (params {smcpPresolve = glpkPresolveOn})
+
+getDefaultMIPControlParameters :: IO (MIPControlParameters Void)
+getDefaultMIPControlParameters = do
+  params <- alloca $ \mipControlPtr -> do
+    glp_init_iocp mipControlPtr
+    peek mipControlPtr
+
+  -- Turn on presolve. Users can simply turn this off before the first
+  -- optimization call if they desire.
+  pure (params {iocpPresolve = glpkPresolveOn})
 
 runGlpk' :: Glpk a -> IO a
 runGlpk' glpk = do
@@ -132,76 +196,19 @@ runGlpk' glpk = do
   _ <- glp_term_out glpkOff
 
   bracket glp_create_prob glp_delete_prob $ \problem -> do
-    -- Load the default simplex control parameters
-    defaultSimplexControl <- alloca $ \simplexControlPtr -> do
-      glp_init_smcp simplexControlPtr
-      peek simplexControlPtr
-
-    -- Load the default MIP control parameters
-    defaultMipControl <- alloca $ \mipControlPtr -> do
-      glp_init_iocp mipControlPtr
-      peek mipControlPtr
-
-    -- Turn on presolve, because it seems insane not to.
-    --
-    -- In particular, this ensures that a naked call to optimizeIP
-    -- doesn't fail because of the lack of a basis. Sophisticated users
-    -- can control this parameter as they see fit befor the first
-    -- optimization call.
-    let simplexControl = defaultSimplexControl {smcpPresolve = glpkPresolveOn}
-        mipControl = defaultMipControl {iocpPresolve = glpkPresolveOn}
-
     env <-
       GlpkEnv problem
         <$> newIORef []
+        <*> newIORef 0
         <*> newIORef []
-        <*> newIORef simplexControl
-        <*> newIORef mipControl
+        <*> newIORef 0
+        <*> (getDefaultSimplexControlParameters >>= newIORef)
+        <*> (getDefaultMIPControlParameters >>= newIORef)
         <*> newIORef Nothing
 
     runReaderT (_runGlpk glpk) env
 
 data SolveType = LP | MIP | InteriorPoint
-
--- | An interface to the low-level GLPK API.
---
--- High-level solver settings can be modified by altering the
--- 'SimplexMethodControlParameters' and 'MIPControlParameters' values
--- for LP and IP solves, respectively.
-data GlpkEnv = GlpkEnv
-  { -- | A pointer to the Problem object. Most GLPK routines take this
-    -- as the first argument.
-    _glpkEnvProblem :: Ptr Problem,
-    -- | The variables in the model
-    _glpkVariables :: IORef [GlpkVariable],
-    -- | The constraints in the model
-    _glpkConstraints :: IORef [GlpkConstraint],
-    -- | The control parameters for the simplex method
-    _glpkSimplexControl :: IORef SimplexMethodControlParameters,
-    -- | The control parameters for the MIP solver
-    _glpkMIPControl :: IORef (MIPControlParameters Void),
-    -- | The type of the last solve. This is needed to know whether to
-    -- retrieve simplex, interior point, or MIP solutions.
-    _glpkLastSolveType :: IORef (Maybe SolveType)
-  }
-
-data NamedRef a = NamedRef
-  { namedRefId :: Int,
-    namedRefRef :: IORef a
-  }
-
-instance Eq (NamedRef a) where
-  x == y = namedRefId x == namedRefId y
-
-instance Ord (NamedRef a) where
-  x <= y = namedRefId x <= namedRefId y
-
-instance Show (NamedRef a) where
-  show = show . namedRefId
-
-type GlpkConstraint = NamedRef Row
-
-type GlpkVariable = NamedRef Column
 
 askProblem :: Glpk (Ptr Problem)
 askProblem = asks _glpkEnvProblem
@@ -212,70 +219,74 @@ askVariablesRef = asks _glpkVariables
 askConstraintsRef :: Glpk (IORef [GlpkConstraint])
 askConstraintsRef = asks _glpkConstraints
 
-register :: Glpk (IORef [NamedRef a]) -> NamedRef a -> Glpk ()
-register askRef x = do
-  ref <- askRef
-  liftIO $ modifyIORef' ref (x :)
+register :: GlpkPtr a -> IORef [GlpkPtr a] -> Glpk ()
+register newPtr ptrRefs = do
+  liftIO $ modifyIORef' ptrRefs (newPtr :)
 
-unregister :: (Enum a) => Glpk (IORef [NamedRef a]) -> NamedRef a -> Glpk ()
-unregister askRef x =
-  let decrement (NamedRef _ ref) = modifyIORef' ref pred
+unregister :: Integral a => GlpkPtr a -> IORef [GlpkPtr a] -> Glpk ()
+unregister deletedPtr ptrsRef =
+  let update removed (GlpkPtr _ _ ptr) = do
+        z <- readIORef ptr
+        when (z > removed) $
+          modifyIORef' ptr pred
+   in liftIO $ do
+        -- If the reference was already deleted, do nothing
+        deleted <- readIORef (_glpkPtrDeleted deletedPtr)
+        unless deleted $ do
+          -- Mark deletion
+          writeIORef (_glpkPtrDeleted deletedPtr) True
 
-      mogrify [] = return ()
-      mogrify (z : zs)
-        | z <= x = return ()
-        | otherwise = decrement z >> mogrify zs
-   in do
-        ref <- askRef
-        liftIO $ do
           -- Remove the element to be unregistered
-          modifyIORef' ref (delete x)
+          modifyIORef' ptrsRef (filter ((/= _glpkPtrId deletedPtr) . _glpkPtrId))
 
           -- Modify the referenced values that were greater than the
-          -- referenced element
-          readIORef ref >>= mogrify
+          -- referenced element.
+          deletedId <- readIORef (_glpkPtrRef deletedPtr)
+          ptrs <- readIORef ptrsRef
+          mapM_ (update deletedId) ptrs
 
-readColumn :: Variable Glpk -> Glpk Column
-readColumn = liftIO . readIORef . namedRefRef . fromVariable
+readColumn :: GlpkVariable -> Glpk Column
+readColumn = liftIO . readIORef . _glpkPtrRef
 
-readRow :: Constraint Glpk -> Glpk Row
-readRow = liftIO . readIORef . namedRefRef . fromConstraint
+readRow :: GlpkConstraint -> Glpk Row
+readRow = liftIO . readIORef . _glpkPtrRef
 
-addVariable' :: Glpk (Variable Glpk)
+addVariable' :: Glpk GlpkVariable
 addVariable' = do
   problem <- askProblem
   variable <- liftIO $ do
     column <- glp_add_cols problem 1
-
     glp_set_col_bnds problem column glpkFree 0 0
+    GlpkPtr (fromIntegral column)
+      <$> newIORef False
+      <*> newIORef column
 
-    columnRef <- newIORef column
-    return $ NamedRef (fromIntegral column) columnRef
-  register askVariablesRef variable
-  return (Variable variable)
+  asks _glpkVariables >>= register variable
+  pure variable
 
-setVariableName' :: Variable Glpk -> String -> Glpk ()
+setVariableName' :: GlpkVariable -> T.Text -> Glpk ()
 setVariableName' variable name = do
   problem <- askProblem
   column <- readColumn variable
-  liftIO $ withCString name (glp_set_col_name problem column)
+  liftIO $ withCText name (glp_set_col_name problem column)
 
-getVariableName' :: Variable Glpk -> Glpk String
+getVariableName' :: GlpkVariable -> Glpk T.Text
 getVariableName' variable = do
   problem <- askProblem
   column <- readColumn variable
-  liftIO $ glp_get_col_name problem column >>= peekCString
+  name <- liftIO $ glp_get_col_name problem column >>= peekCString
+  pure (T.pack name)
 
-removeVariable' :: Variable Glpk -> Glpk ()
-removeVariable' variable = do
+deleteVariable' :: GlpkVariable -> Glpk ()
+deleteVariable' variable = do
   problem <- askProblem
   column <- readColumn variable
   liftIO $ allocaGlpkArray [column] (glp_del_cols problem 1)
-  unregister askVariablesRef (fromVariable variable)
+  asks _glpkVariables >>= unregister variable
 
-addConstraint' :: Inequality (LinearExpression Double (Variable Glpk)) -> Glpk (Constraint Glpk)
+addConstraint' :: Inequality (Expr GlpkVariable) -> Glpk GlpkConstraint
 addConstraint' (Inequality ordering lhs rhs) =
-  let LinearExpression terms constant = simplify (lhs .-. rhs) :: LinearExpression Double (Variable Glpk)
+  let LinearExpression terms constant = simplify (lhs .-. rhs) :: Expr GlpkVariable
 
       constraintType :: GlpkConstraintType
       constraintType = case ordering of
@@ -289,7 +300,7 @@ addConstraint' (Inequality ordering lhs rhs) =
       numVars :: CInt
       numVars = fromIntegral (length terms)
 
-      variables :: [Variable Glpk]
+      variables :: [GlpkVariable]
       variables = map snd terms
 
       coefficients :: [CDouble]
@@ -297,44 +308,47 @@ addConstraint' (Inequality ordering lhs rhs) =
    in do
         problem <- askProblem
         columns <- mapM readColumn variables
-        constraintId <- liftIO $ do
+        constraintPtr <- liftIO $ do
           row <- glp_add_rows problem 1
-          rowRef <- newIORef row
           allocaGlpkArray columns $ \columnArr ->
             allocaGlpkArray coefficients $ \coefficientArr -> do
               glp_set_row_bnds problem row constraintType constraintRhs constraintRhs
               glp_set_mat_row problem row numVars columnArr coefficientArr
-          return $ NamedRef (fromIntegral row) rowRef
 
-        register askConstraintsRef constraintId
-        return (Constraint constraintId)
+          GlpkPtr (fromIntegral row)
+            <$> newIORef False
+            <*> newIORef row
 
-setConstraintName' :: Constraint Glpk -> String -> Glpk ()
+        asks _glpkConstraints >>= register constraintPtr
+        pure constraintPtr
+
+setConstraintName' :: GlpkConstraint -> T.Text -> Glpk ()
 setConstraintName' constraintId name = do
   problem <- askProblem
   row <- readRow constraintId
-  liftIO $ withCString name (glp_set_row_name problem row)
+  liftIO $ withCText name (glp_set_row_name problem row)
 
-getConstraintName' :: Constraint Glpk -> Glpk String
+getConstraintName' :: GlpkConstraint -> Glpk T.Text
 getConstraintName' constraint = do
   problem <- askProblem
   row <- readRow constraint
-  liftIO $ glp_get_row_name problem row >>= peekCString
+  name <- liftIO $ glp_get_row_name problem row >>= peekCString
+  pure (T.pack name)
 
-getDualValue' :: Constraint Glpk -> Glpk Double
-getDualValue' constraint = do
+getDualValue :: GlpkConstraint -> Glpk Double
+getDualValue constraint = do
   problem <- askProblem
   row <- readRow constraint
   fmap realToFrac . liftIO $ glp_get_row_dual problem row
 
-removeConstraint' :: Constraint Glpk -> Glpk ()
-removeConstraint' constraintId = do
+deleteConstraint' :: GlpkConstraint -> Glpk ()
+deleteConstraint' constraint = do
   problem <- askProblem
-  row <- readRow constraintId
+  row <- readRow constraint
   liftIO $ allocaGlpkArray [row] (glp_del_rows problem 1)
-  unregister askConstraintsRef (fromConstraint constraintId)
+  asks _glpkConstraints >>= unregister constraint
 
-addObjective' :: LinearExpression Double (Variable Glpk) -> Glpk (Objective Glpk)
+addObjective' :: Expr GlpkVariable -> Glpk GlpkObjective
 addObjective' expr =
   let LinearExpression terms constant = simplify expr
    in do
@@ -348,28 +362,29 @@ addObjective' expr =
           column <- readColumn variable
           liftIO $ glp_set_obj_coef problem column (realToFrac coef)
 
-        pure Objective
+        pure (GlpkObjective ())
 
-getObjectiveName' :: Objective Glpk -> Glpk String
+getObjectiveName' :: GlpkObjective -> Glpk T.Text
 getObjectiveName' _ = do
   problem <- askProblem
-  liftIO $ glp_get_obj_name problem >>= peekCString
+  name <- liftIO $ glp_get_obj_name problem >>= peekCString
+  pure (T.pack name)
 
-setObjectiveName' :: Objective Glpk -> String -> Glpk ()
+setObjectiveName' :: GlpkObjective -> T.Text -> Glpk ()
 setObjectiveName' _ name = do
   problem <- askProblem
-  liftIO $ withCString name (glp_set_obj_name problem)
+  liftIO $ withCText name (glp_set_obj_name problem)
 
-getObjectiveSense' :: Objective Glpk -> Glpk Sense
-getObjectiveSense' _ = do
+getSense' :: GlpkObjective -> Glpk Sense
+getSense' _ = do
   problem <- askProblem
   direction <- liftIO $ glp_get_obj_dir problem
   if direction == glpkMin
     then pure Minimization
     else pure Maximization
 
-setObjectiveSense' :: Objective Glpk -> Sense -> Glpk ()
-setObjectiveSense' _ sense =
+setSense' :: GlpkObjective -> Sense -> Glpk ()
+setSense' _ sense =
   let direction = case sense of
         Minimization -> glpkMin
         Maximization -> glpkMax
@@ -377,7 +392,7 @@ setObjectiveSense' _ sense =
         problem <- askProblem
         liftIO $ glp_set_obj_dir problem direction
 
-getObjectiveValue' :: Objective Glpk -> Glpk Double
+getObjectiveValue' :: GlpkObjective -> Glpk Double
 getObjectiveValue' _ = do
   problem <- askProblem
   lastSolveRef <- asks _glpkLastSolveType
@@ -419,7 +434,7 @@ optimizeIP' = do
       _ <- glp_intopt problem controlPtr
       glp_mip_status problem Data.Functor.<&> solutionStatus
 
-setVariableBounds' :: Variable Glpk -> Bounds Double -> Glpk ()
+setVariableBounds' :: GlpkVariable -> Bounds -> Glpk ()
 setVariableBounds' variable bounds =
   let (boundType, cLow, cHigh) = case bounds of
         Free -> (glpkFree, 0, 0)
@@ -431,7 +446,7 @@ setVariableBounds' variable bounds =
         column <- readColumn variable
         liftIO $ glp_set_col_bnds problem column boundType cLow cHigh
 
-getVariableBounds' :: Variable Glpk -> Glpk (Bounds Double)
+getVariableBounds' :: GlpkVariable -> Glpk Bounds
 getVariableBounds' variable =
   let boundsFor lb ub
         | lb == - maxCDouble && ub == maxCDouble = Free
@@ -448,7 +463,7 @@ getVariableBounds' variable =
         ub <- liftIO (glp_get_col_ub problem column)
         return (boundsFor lb ub)
 
-setVariableDomain' :: Variable Glpk -> Domain -> Glpk ()
+setVariableDomain' :: GlpkVariable -> Domain -> Glpk ()
 setVariableDomain' variable domain =
   let vType = case domain of
         Continuous -> glpkContinuous
@@ -459,24 +474,24 @@ setVariableDomain' variable domain =
         column <- readColumn variable
         liftIO $ glp_set_col_kind problem column vType
 
-getVariableDomain' :: Variable Glpk -> Glpk Domain
+getVariableDomain' :: GlpkVariable -> Glpk Domain
 getVariableDomain' variable =
-  let getDomain :: GlpkVariableType -> Glpk Domain
-      getDomain vType | vType == glpkContinuous = return Continuous
-      getDomain vType | vType == glpkInteger = return Integer
-      getDomain vType
+  let getDomain' :: GlpkVariableType -> Glpk Domain
+      getDomain' vType | vType == glpkContinuous = return Continuous
+      getDomain' vType | vType == glpkInteger = return Integer
+      getDomain' vType
         | vType == glpkBinary = return Binary
         | otherwise = throwIO unknownCode
         where
-          typeName = show (typeOf vType)
+          typeName = T.pack . show . typeOf $ vType
           GlpkVariableType code = vType
           unknownCode = UnknownCode typeName code
    in do
         problem <- askProblem
         column <- readColumn variable
-        getDomain =<< liftIO (glp_get_col_kind problem column)
+        getDomain' =<< liftIO (glp_get_col_kind problem column)
 
-getVariableValue' :: Variable Glpk -> Glpk Double
+getVariableValue' :: GlpkVariable -> Glpk Double
 getVariableValue' variable = do
   lastSolveRef <- asks _glpkLastSolveType
   lastSolve <- (liftIO . readIORef) lastSolveRef
@@ -548,3 +563,6 @@ maxCDouble = encodeFloat significand' exponent'
     (_, maxExponent) = floatRange (undefined :: CDouble)
     significand' = base ^ precision - 1
     exponent' = maxExponent - precision
+
+withCText :: T.Text -> (CString -> IO a) -> IO a
+withCText = withCString . T.unpack

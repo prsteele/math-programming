@@ -5,10 +5,9 @@ module Math.Programming.Tests.IP where
 import Control.Monad.IO.Class
 import Math.Programming
 import Test.Hspec
-import Text.Printf
 
 makeIPTests ::
-  (PrintfArg (Numeric m), RealFrac (Numeric m), MonadIO m, IPMonad m) =>
+  (MonadIO m, IPMonad v c o m) =>
   -- | The runner for the API being tested.
   (m () -> IO ()) ->
   -- | The resulting test suite.
@@ -29,7 +28,7 @@ makeIPTests runner =
 -- @
 --
 -- The optimal solution to this MIP is x = 2, y = 1.1.
-simpleMIPTest :: (PrintfArg (Numeric m), RealFrac (Numeric m), MonadIO m, IPMonad m) => m ()
+simpleMIPTest :: (MonadIO m, IPMonad v c o m) => m ()
 simpleMIPTest = do
   x <- bounded 0 5 `asKind` Integer
   y <- bounded 0 5 `asKind` Continuous

@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -13,9 +14,8 @@ module Math.Programming.Glpk.Internal where
 
 import Control.Monad
 import Control.Monad.Except
-import Control.Monad.Reader
+import Control.Monad.Trans.Reader
 import Data.Functor
-import Data.IORef
 import qualified Data.Text as T
 import Data.Typeable
 import Data.Void
@@ -26,8 +26,8 @@ import Foreign.Ptr
 import Foreign.Storable
 import Math.Programming
 import Math.Programming.Glpk.Header
+import UnliftIO
 import UnliftIO.Concurrent
-import UnliftIO.Exception
 
 -- | A reference to a GLPK variable.
 type GlpkVariable = GlpkPtr Column
@@ -104,14 +104,17 @@ data GlpkException
 instance Exception GlpkException
 
 -- | An environment to solve math programs using GLPK.
-newtype Glpk a = Glpk {_runGlpk :: ReaderT GlpkEnv IO a}
+newtype GlpkT m a = GlpkT {_runGlpk :: ReaderT GlpkEnv m a}
   deriving
     ( Functor,
       Applicative,
       Monad,
       MonadIO,
-      MonadReader GlpkEnv
+      MonadUnliftIO,
+      MonadTrans
     )
+
+type Glpk = GlpkT IO
 
 instance LPMonad GlpkVariable GlpkConstraint GlpkObjective Glpk where
   addVariable = addVariable'
@@ -128,6 +131,7 @@ instance LPMonad GlpkVariable GlpkConstraint GlpkObjective Glpk where
   getConstraintValue = getDualValue
 
   addObjective = addObjective'
+  deleteObjective = deleteObjective'
   getObjectiveValue = getObjectiveValue'
   getSense = getSense'
   setSense = setSense'
@@ -210,14 +214,21 @@ runGlpk' glpk = do
 
 data SolveType = LP | MIP | InteriorPoint
 
-askProblem :: Glpk (Ptr Problem)
-askProblem = asks _glpkEnvProblem
+-- | Retrieve a component of the Glpk context
+askGlpk :: Monad m => (GlpkEnv -> a) -> GlpkT m a
+askGlpk = flip fmap (GlpkT ask)
 
+-- | The underlying Glpk problem pointer
+askProblem :: Monad m => GlpkT m (Ptr Problem)
+askProblem = askGlpk _glpkEnvProblem
+
+-- | All registered variables
 askVariablesRef :: Glpk (IORef [GlpkVariable])
-askVariablesRef = asks _glpkVariables
+askVariablesRef = askGlpk _glpkVariables
 
+-- | All registered constraints
 askConstraintsRef :: Glpk (IORef [GlpkConstraint])
-askConstraintsRef = asks _glpkConstraints
+askConstraintsRef = askGlpk _glpkConstraints
 
 register :: GlpkPtr a -> IORef [GlpkPtr a] -> Glpk ()
 register newPtr ptrRefs = do
@@ -261,7 +272,7 @@ addVariable' = do
       <$> newIORef False
       <*> newIORef column
 
-  asks _glpkVariables >>= register variable
+  askVariablesRef >>= register variable
   pure variable
 
 setVariableName' :: GlpkVariable -> T.Text -> Glpk ()
@@ -282,7 +293,7 @@ deleteVariable' variable = do
   problem <- askProblem
   column <- readColumn variable
   liftIO $ allocaGlpkArray [column] (glp_del_cols problem 1)
-  asks _glpkVariables >>= unregister variable
+  askVariablesRef >>= unregister variable
 
 addConstraint' :: Inequality (Expr GlpkVariable) -> Glpk GlpkConstraint
 addConstraint' (Inequality ordering lhs rhs) =
@@ -319,7 +330,7 @@ addConstraint' (Inequality ordering lhs rhs) =
             <$> newIORef False
             <*> newIORef row
 
-        asks _glpkConstraints >>= register constraintPtr
+        askConstraintsRef >>= register constraintPtr
         pure constraintPtr
 
 setConstraintName' :: GlpkConstraint -> T.Text -> Glpk ()
@@ -346,7 +357,7 @@ deleteConstraint' constraint = do
   problem <- askProblem
   row <- readRow constraint
   liftIO $ allocaGlpkArray [row] (glp_del_rows problem 1)
-  asks _glpkConstraints >>= unregister constraint
+  askConstraintsRef >>= unregister constraint
 
 addObjective' :: Expr GlpkVariable -> Glpk GlpkObjective
 addObjective' expr =
@@ -363,6 +374,12 @@ addObjective' expr =
           liftIO $ glp_set_obj_coef problem column (realToFrac coef)
 
         pure (GlpkObjective ())
+
+-- | Delete an objective
+--
+-- There is nothing to acdtually delete, so we just set a zero objective
+deleteObjective' :: GlpkObjective -> Glpk ()
+deleteObjective' _ = addObjective' mempty >> pure ()
 
 getObjectiveName' :: GlpkObjective -> Glpk T.Text
 getObjectiveName' _ = do
@@ -395,7 +412,7 @@ setSense' _ sense =
 getObjectiveValue' :: GlpkObjective -> Glpk Double
 getObjectiveValue' _ = do
   problem <- askProblem
-  lastSolveRef <- asks _glpkLastSolveType
+  lastSolveRef <- askGlpk _glpkLastSolveType
   lastSolve <- (liftIO . readIORef) lastSolveRef
   fmap realToFrac . liftIO $ case lastSolve of
     Just MIP -> glp_mip_obj_val problem
@@ -406,12 +423,12 @@ getObjectiveValue' _ = do
 optimizeLP' :: Glpk SolutionStatus
 optimizeLP' = do
   -- Note that we've run an LP solve
-  solveTypeRef <- asks _glpkLastSolveType
+  solveTypeRef <- askGlpk _glpkLastSolveType
   liftIO $ writeIORef solveTypeRef (Just LP)
 
   -- Run Simplex
   problem <- askProblem
-  controlRef <- asks _glpkSimplexControl
+  controlRef <- askGlpk _glpkSimplexControl
   liftIO $ do
     control <- readIORef controlRef
     alloca $ \controlPtr -> do
@@ -422,11 +439,11 @@ optimizeLP' = do
 optimizeIP' :: Glpk SolutionStatus
 optimizeIP' = do
   -- Note that we've run a MIP solve
-  solveTypeRef <- asks _glpkLastSolveType
+  solveTypeRef <- askGlpk _glpkLastSolveType
   liftIO $ writeIORef solveTypeRef (Just MIP)
 
   problem <- askProblem
-  controlRef <- asks _glpkMIPControl
+  controlRef <- askGlpk _glpkMIPControl
   liftIO $ do
     control <- readIORef controlRef
     alloca $ \controlPtr -> do
@@ -493,7 +510,7 @@ getVariableDomain' variable =
 
 getVariableValue' :: GlpkVariable -> Glpk Double
 getVariableValue' variable = do
-  lastSolveRef <- asks _glpkLastSolveType
+  lastSolveRef <- askGlpk _glpkLastSolveType
   lastSolve <- (liftIO . readIORef) lastSolveRef
 
   let method = case lastSolve of
@@ -511,7 +528,7 @@ getTimeout' =
   let fromMillis :: RealFrac a => CInt -> a
       fromMillis millis = realToFrac millis / 1000
    in do
-        controlRef <- asks _glpkSimplexControl
+        controlRef <- askGlpk _glpkSimplexControl
         control <- liftIO (readIORef controlRef)
         return $ fromMillis (smcpTimeLimitMillis control)
 
@@ -520,21 +537,21 @@ setTimeout' seconds =
   let millis :: Integer
       millis = round (seconds * 1000)
    in do
-        controlRef <- asks _glpkSimplexControl
+        controlRef <- askGlpk _glpkSimplexControl
         control <- liftIO (readIORef controlRef)
         let control' = control {smcpTimeLimitMillis = fromIntegral millis}
         liftIO (writeIORef controlRef control')
 
 setRelativeMIPGap' :: RealFrac a => a -> Glpk ()
 setRelativeMIPGap' gap = do
-  controlRef <- asks _glpkMIPControl
+  controlRef <- askGlpk _glpkMIPControl
   control <- liftIO (readIORef controlRef)
   let control' = control {iocpRelativeMIPGap = realToFrac gap}
   liftIO (writeIORef controlRef control')
 
 getRelativeMIPGap' :: RealFrac a => Glpk a
 getRelativeMIPGap' = do
-  controlRef <- asks _glpkMIPControl
+  controlRef <- askGlpk _glpkMIPControl
   control <- liftIO (readIORef controlRef)
   return $ realToFrac (iocpRelativeMIPGap control)
 

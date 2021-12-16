@@ -28,6 +28,7 @@ library
                    , math-programming ^>=0.6
                    , mtl              ^>=2.2.2
                    , text             ^>=1.2.4.1
+                   , transformers
                    , unliftio         ^>=0.2.15
 
 test-suite math-programming-glpk-test-suite

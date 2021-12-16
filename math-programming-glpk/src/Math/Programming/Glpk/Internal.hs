@@ -273,7 +273,11 @@ addVariable' = do
       <*> newIORef column
 
   askVariablesRef >>= register variable
+  setVariableName' variable (defaultVariableName variable)
   pure variable
+
+defaultVariableName :: GlpkVariable -> T.Text
+defaultVariableName (GlpkPtr x _ _) = "x" <> T.pack (show x)
 
 setVariableName' :: GlpkVariable -> T.Text -> Glpk ()
 setVariableName' variable name = do

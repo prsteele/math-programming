@@ -101,28 +101,28 @@ asKind make dom = do
 --   setName x n
 --   pure x
 
-(#+@) :: Double -> b -> LinearExpression Double b
-(#+.) :: Double -> LinearExpression Double b -> LinearExpression Double b
-(@+#) :: b -> Double -> LinearExpression Double b
-(@+@) :: b -> b -> LinearExpression Double b
-(@+.) :: b -> LinearExpression Double b -> LinearExpression Double b
-(.+#) :: LinearExpression Double b -> Double -> LinearExpression Double b
-(.+@) :: LinearExpression Double b -> b -> LinearExpression Double b
-(.+.) :: LinearExpression Double b -> LinearExpression Double b -> LinearExpression Double b
-(#-@) :: Double -> b -> LinearExpression Double b
-(#-.) :: Double -> LinearExpression Double b -> LinearExpression Double b
-(@-#) :: b -> Double -> LinearExpression Double b
-(@-@) :: b -> b -> LinearExpression Double b
-(@-.) :: b -> LinearExpression Double b -> LinearExpression Double b
-(.-#) :: LinearExpression Double b -> Double -> LinearExpression Double b
-(.-@) :: LinearExpression Double b -> b -> LinearExpression Double b
-(.-.) :: LinearExpression Double b -> LinearExpression Double b -> LinearExpression Double b
-(#*.) :: Double -> LinearExpression Double b -> LinearExpression Double b
-(.*#) :: LinearExpression Double b -> Double -> LinearExpression Double b
-(#*@) :: Double -> b -> LinearExpression Double b
-(@*#) :: b -> Double -> LinearExpression Double b
-(@/#) :: b -> Double -> LinearExpression Double b
-(./#) :: LinearExpression Double b -> Double -> LinearExpression Double b
+(#+@) :: Num a => a -> b -> LinearExpression a b
+(#+.) :: Num a => a -> LinearExpression a b -> LinearExpression a b
+(@+#) :: Num a => b -> a -> LinearExpression a b
+(@+@) :: Num a => b -> b -> LinearExpression a b
+(@+.) :: Num a => b -> LinearExpression a b -> LinearExpression a b
+(.+#) :: Num a => LinearExpression a b -> a -> LinearExpression a b
+(.+@) :: Num a => LinearExpression a b -> b -> LinearExpression a b
+(.+.) :: Num a => LinearExpression a b -> LinearExpression a b -> LinearExpression a b
+(#-@) :: Num a => a -> b -> LinearExpression a b
+(#-.) :: Num a => a -> LinearExpression a b -> LinearExpression a b
+(@-#) :: Num a => b -> a -> LinearExpression a b
+(@-@) :: Num a => b -> b -> LinearExpression a b
+(@-.) :: Num a => b -> LinearExpression a b -> LinearExpression a b
+(.-#) :: Num a => LinearExpression a b -> a -> LinearExpression a b
+(.-@) :: Num a => LinearExpression a b -> b -> LinearExpression a b
+(.-.) :: Num a => LinearExpression a b -> LinearExpression a b -> LinearExpression a b
+(#*.) :: Num a => a -> LinearExpression a b -> LinearExpression a b
+(.*#) :: Num a => LinearExpression a b -> a -> LinearExpression a b
+(#*@) :: Num a => a -> b -> LinearExpression a b
+(@*#) :: Num a => b -> a -> LinearExpression a b
+(@/#) :: Fractional a => b -> a -> LinearExpression a b
+(./#) :: Fractional a => LinearExpression a b -> a -> LinearExpression a b
 x #+@ y = con x .+. var y
 
 x #+. y = con x .+. y
@@ -227,7 +227,7 @@ eval :: Num a => LinearExpression a a -> a
 eval (LinearExpression terms constant) = constant + sum (map (uncurry (*)) terms)
 
 -- | Construct an expression representing a variable.
-var :: b -> LinearExpression Double b
+var :: Num a => b -> LinearExpression a b
 var x = LinearExpression [(1, x)] 0
 
 -- | Construct an expression representing a constant.

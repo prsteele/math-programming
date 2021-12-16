@@ -42,9 +42,9 @@ testFreeVariablesLP = runGlpk $ do
 
   optimizeLP >>= assertFeasible
 
-  vx <- getValue x
-  vy <- getValue y
-  vz <- getValue z
+  vx <- getVariableValue x
+  vy <- getVariableValue y
+  vz <- getVariableValue z
 
   liftIO $ 0 `shouldBe` vx
   liftIO $ 3.1 `shouldBe` vy
@@ -62,9 +62,9 @@ testFreeVariablesIP = runGlpk $ do
 
   optimizeIP >>= assertFeasible
 
-  vx <- getValue x
-  vy <- getValue y
-  vz <- getValue z
+  vx <- getVariableValue x
+  vy <- getVariableValue y
+  vz <- getVariableValue z
 
   liftIO $ 0 `shouldBe` vx
   liftIO $ 3 `shouldBe` vy

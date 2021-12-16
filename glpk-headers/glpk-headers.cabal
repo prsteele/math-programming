@@ -33,5 +33,5 @@ test-suite glpk-headers-haskell-test-suite
   extra-libraries:   glpk
   other-modules:     Math.Programming.Glpk.HeadersSpec
   build-depends:     glpk-headers
-                   , base  ^>=4.13
+                   , base  ^>=4.14.1.0
                    , hspec ^>=2.7.10

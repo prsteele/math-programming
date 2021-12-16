@@ -279,6 +279,9 @@ addVariable' = do
 defaultVariableName :: GlpkVariable -> T.Text
 defaultVariableName (GlpkPtr x _ _) = "x" <> T.pack (show x)
 
+defaultConstraintName :: GlpkConstraint -> T.Text
+defaultConstraintName (GlpkPtr x _ _) = "c" <> T.pack (show x)
+
 setVariableName' :: GlpkVariable -> T.Text -> Glpk ()
 setVariableName' variable name = do
   problem <- askProblem
@@ -335,6 +338,7 @@ addConstraint' (Inequality ordering lhs rhs) =
             <*> newIORef row
 
         askConstraintsRef >>= register constraintPtr
+        setConstraintName' constraintPtr (defaultConstraintName constraintPtr)
         pure constraintPtr
 
 setConstraintName' :: GlpkConstraint -> T.Text -> Glpk ()

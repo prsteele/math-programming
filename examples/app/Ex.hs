@@ -74,7 +74,7 @@ program clauses = do
     vx <- termExpr x
     vy <- termExpr y
     vz <- termExpr z
-    vx .+. vy .+. vz .>=# 1
+    vx .+ vy .+ vz .>=# 1
   status <- optimizeIP
   case status of
     Error -> liftIO (print "Error") >> pure Nothing
@@ -89,8 +89,8 @@ termExpr (v, b) = do
   x <- getVar v
   pure $
     if b
-      then var x
-      else 1 #-@ x
+      then 1 .* x
+      else (-1) .* x
 
 getVar :: (IPMonad v c o m, MonadState (M.Map Var v) m) => Var -> m v
 getVar v = do

@@ -40,47 +40,17 @@ module Math.Programming
 
     -- ** Linear expressions
     -- $expressions
-    LinearExpression (..),
+    LinExpr (..),
     eval,
     simplify,
     var,
     con,
-    exprSum,
-    varSum,
-
-    -- *** Addition
-    -- $addition
-    (.+.),
-    (@+@),
-    (.+@),
-    (@+.),
-    (@+#),
-    (#+@),
-    (#+.),
-    (.+#),
-
-    -- *** Subtraction
-    -- $subtraction
-    (.-.),
-    (@-@),
-    (.-@),
-    (@-.),
-    (@-#),
-    (#-@),
-    (#-.),
-    (.-#),
-
-    -- *** Multiplication
-    -- $multiplication
-    (#*@),
-    (@*#),
-    (#*.),
-    (.*#),
-
-    -- *** Division
-    -- $division
-    (@/#),
-    (./#),
+    vsum,
+    esum,
+    (.*),
+    (.+),
+    (.-),
+    (./),
 
     -- ** Constraints
     -- $constraints
@@ -130,6 +100,7 @@ module Math.Programming
 where
 
 import Math.Programming.Dsl
+import Math.Programming.LinExpr
 import Math.Programming.Types
 
 -- $mathprograms
@@ -155,8 +126,8 @@ import Math.Programming.Types
 
 -- $expressions
 --
--- The module 'Math.Programming.LinearExpression' provides operators
--- to build up 'LinearExpression' objects using declared variables.
+-- The module 'Math.Programming.LinExpr' provides operators
+-- to build up 'LinExpr' objects using declared variables.
 
 -- $addition
 --

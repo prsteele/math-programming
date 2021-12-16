@@ -93,7 +93,7 @@ dietProblemTest =
 
         -- Create the nutrient constraints
         forM_ nutrients $ \nutrient -> do
-          let lhs = exprSum [nutrition nutrient food #*@ v | (food, v) <- amounts]
+          let lhs = esum [nutrition nutrient food .* v | (food, v) <- amounts]
               (lower, upper) = nutrientBounds nutrient
           cl <- lhs .<=# upper
           setConstraintName cl (nutrientMaxName nutrient)
@@ -102,7 +102,7 @@ dietProblemTest =
           pure ()
 
         -- Set the objective
-        let objectiveExpr = exprSum [cost food #*@ v | (food, v) <- amounts]
+        let objectiveExpr = esum [cost food .* v | (food, v) <- amounts]
         objective <- addObjective objectiveExpr
         setSense objective Minimization
 

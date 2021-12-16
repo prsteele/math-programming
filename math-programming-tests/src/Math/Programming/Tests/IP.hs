@@ -34,7 +34,7 @@ simpleMIPTest = do
   y <- bounded 0 5 `asKind` Continuous
   _ <- x @>=# 1.1
   _ <- y @>=# 1.1
-  objective <- minimize $ x @+@ y
+  objective <- minimize $ var x .+ var y
   status <- optimizeIP
 
   -- Check that we reached optimality

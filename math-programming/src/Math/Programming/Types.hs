@@ -1,8 +1,10 @@
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Math.Programming.Types where
@@ -10,13 +12,8 @@ module Math.Programming.Types where
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.State
-import Data.Bifunctor
 import qualified Data.Text as T
-import Data.Traversable (fmapDefault, foldMapDefault)
-
--- | A convient shorthand for the type of linear expressions used in a
--- given model.
-type Expr = LinearExpression Double
+import Math.Programming.LinExpr
 
 -- | A linear program.
 --
@@ -199,62 +196,17 @@ data Domain
       Show
     )
 
--- | A linear expression containing symbolic variables of type @b@ and
--- numeric coefficients of type @a@.
---
--- Using 'String's to denote variables and 'Double's as our numeric
--- type, we could express /3 x + 2 y + 1/ as
---
--- @
---   LinearExpression [(3, "x"), (2, "y")] 1
--- @
-data LinearExpression a b
-  = LinearExpression [(a, b)] a
-  deriving
-    ( Read,
-      Show
-    )
-
--- | Implements addition of 'LinearExpression a b' terms
-instance Num a => Semigroup (LinearExpression a b) where
-  (LinearExpression termsLhs constantLhs) <> (LinearExpression termsRhs constantRhs) =
-    LinearExpression (termsLhs <> termsRhs) (constantLhs + constantRhs)
-
--- | Using '0' as the identity element
-instance Num a => Monoid (LinearExpression a b) where
-  mempty = LinearExpression [] 0
-
-instance Functor (LinearExpression a) where
-  fmap = fmapDefault
-
-instance Bifunctor LinearExpression where
-  first f (LinearExpression terms constant) =
-    LinearExpression (fmap (first f) terms) (f constant)
-  second f (LinearExpression terms constant) =
-    LinearExpression (fmap (fmap f) terms) constant
-
-instance Foldable (LinearExpression a) where
-  foldMap = foldMapDefault
-
--- | Useful for substituting values in a monadic/applicative context
-instance Traversable (LinearExpression a) where
-  traverse f (LinearExpression terms constant) =
-    LinearExpression <$> traverse (traverse f) terms <*> pure constant
-
 -- | Non-strict inequalities.
 data Inequality a
   = Inequality Ordering a a
   deriving
     ( Read,
-      Show
+      Show,
+      Functor,
+      Foldable,
+      Traversable
     )
 
-instance Functor Inequality where
-  fmap = fmapDefault
-
-instance Foldable Inequality where
-  foldMap = foldMapDefault
-
-instance Traversable Inequality where
-  traverse f (Inequality ordering lhs rhs) =
-    Inequality ordering <$> f lhs <*> f rhs
+-- | A convient shorthand for the type of linear expressions used in a
+-- given model.
+type Expr = LinExpr Double

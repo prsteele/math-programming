@@ -18,10 +18,10 @@ spec = describe "LinearExpression tests" $ do
   simplifyRegressions
   prop "simplifies expressions properly" simplifyProp
 
-type ExactExpr = LinearExpression (Ratio Integer) (Ratio Integer)
+type ExactExpr = LinExpr (Ratio Integer) (Ratio Integer)
 
 instance Arbitrary ExactExpr where
-  arbitrary = LinearExpression <$> arbitrary <*> arbitrary
+  arbitrary = LinExpr <$> arbitrary <*> arbitrary
 
 -- | A pair of linear expressions, differing only by the ordering of
 -- the summands.
@@ -33,9 +33,9 @@ newtype ShuffledAndUnshuffled
 
 instance Arbitrary ShuffledAndUnshuffled where
   arbitrary = do
-    unshuffled@(LinearExpression terms constant) <- arbitrary
+    unshuffled@(LinExpr terms constant) <- arbitrary
     shuffledTerms <- shuffle terms
-    let shuffled = LinearExpression shuffledTerms constant
+    let shuffled = LinExpr shuffledTerms constant
     return $ ShuffledAndUnshuffled (unshuffled, shuffled)
 
 -- | Addition should be commutative.
@@ -53,14 +53,14 @@ newtype ShuffledCoefficients
 
 instance Arbitrary ShuffledCoefficients where
   arbitrary = do
-    unshuffled@(LinearExpression terms constant) <- arbitrary
+    unshuffled@(LinExpr terms constant) <- arbitrary
     terms' <- forM terms $ \(x, y) -> do
       flipped <- arbitrary
       return $
         if flipped
           then (y, x)
           else (x, y)
-    let shuffled = LinearExpression terms' constant
+    let shuffled = LinExpr terms' constant
     return $ ShuffledCoefficients (shuffled, unshuffled)
 
 coefficientCommutativityProp :: ShuffledCoefficients -> Bool
@@ -69,7 +69,7 @@ coefficientCommutativityProp (ShuffledCoefficients (shuffled, unshuffled)) =
 
 additiveAssociativityProp :: ExactExpr -> ExactExpr -> ExactExpr -> Bool
 additiveAssociativityProp x y z =
-  eval ((x .+. y) .+. z) == eval (x .+. (y .+. z))
+  eval ((x .+ y) .+ z) == eval (x .+ (y .+ z))
 
 simplifyProp :: ExactExpr -> Bool
 simplifyProp x = eval x == eval (simplify x)
@@ -79,7 +79,7 @@ simplifyRegressions = do
   it "simplifies x + x - x" $
     let terms :: [(Int, Int)]
         coef :: Int
-        (LinearExpression terms coef) = simplify $ LinearExpression [(1, 0), (1, 0), (-1, 0)] 0
+        (LinExpr terms coef) = simplify $ LinExpr [(1, 0), (1, 0), (-1, 0)] 0
      in do
           coef `shouldBe` 0
           terms `shouldBe` [(1, 0)]

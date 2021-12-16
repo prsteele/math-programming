@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Math.Programming.LinearExpressionSpec where
+module Math.Programming.TypesSpec where
 
 import Control.Monad
 import Data.Ratio
@@ -15,6 +15,7 @@ spec = describe "LinearExpression tests" $ do
   prop "satisfies addititive commutivity" commutativityProp
   prop "satisfies addititive associativity" additiveAssociativityProp
   prop "satisfies coefficient commutativity" coefficientCommutativityProp
+  simplifyRegressions
   prop "simplifies expressions properly" simplifyProp
 
 type ExactExpr = LinearExpression (Ratio Integer) (Ratio Integer)
@@ -72,3 +73,13 @@ additiveAssociativityProp x y z =
 
 simplifyProp :: ExactExpr -> Bool
 simplifyProp x = eval x == eval (simplify x)
+
+simplifyRegressions :: Spec
+simplifyRegressions = do
+  it "simplifies x + x - x" $
+    let terms :: [(Int, Int)]
+        coef :: Int
+        (LinearExpression terms coef) = simplify $ LinearExpression [(1, 0), (1, 0), (-1, 0)] 0
+     in do
+          coef `shouldBe` 0
+          terms `shouldBe` [(1, 0)]

@@ -36,7 +36,7 @@ test-suite math-programming-test-suite
   main-is:           Spec.hs
   hs-source-dirs:    test
   ghc-options:       -threaded -with-rtsopts=-N -Wall
-  other-modules:     Math.Programming.LinearExpressionSpec
+  other-modules:     Math.Programming.TypesSpec
   build-depends:     math-programming
                    , base       ^>=4.14.1.0
                    , hspec      ^>=2.7.10

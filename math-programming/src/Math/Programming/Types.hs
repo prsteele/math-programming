@@ -9,6 +9,7 @@ module Math.Programming.Types where
 
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
+import Control.Monad.Trans.State
 import Data.Bifunctor
 import qualified Data.Text as T
 import Data.Traversable (fmapDefault, foldMapDefault)
@@ -81,6 +82,32 @@ instance LPMonad v c o m => LPMonad v c o (ReaderT r m) where
   setTimeout = setTimeout
   optimizeLP = optimizeLP
 
+instance LPMonad v c o m => LPMonad v c o (StateT s m) where
+  addVariable = lift addVariable
+  deleteVariable = lift . deleteVariable
+  getVariableName = lift . getVariableName
+  setVariableName = lift2 setVariableName
+  getVariableValue = lift . getVariableValue
+  getBounds = lift . getBounds
+  setBounds = lift2 setBounds
+  addConstraint = lift . addConstraint
+  deleteConstraint = lift . deleteConstraint
+  getConstraintName = lift . getConstraintName
+  setConstraintName = lift2 setConstraintName
+  getConstraintValue = lift . getConstraintValue
+
+  addObjective = lift . addObjective
+  deleteObjective = lift . deleteObjective
+  getObjectiveValue = lift . getObjectiveValue
+  getSense = lift . getSense
+  setSense = lift2 setSense
+  getObjectiveName = lift . getObjectiveName
+  setObjectiveName = lift2 setObjectiveName
+
+  getTimeout = getTimeout
+  setTimeout = setTimeout
+  optimizeLP = optimizeLP
+
 -- | A (mixed) integer program.
 --
 -- In addition to the methods of the 'LPMonad' class, this monad
@@ -96,6 +123,13 @@ class LPMonad v c o m => IPMonad v c o m | m -> v c o where
   optimizeIP :: m SolutionStatus
 
 instance IPMonad v c o m => IPMonad v c o (ReaderT r m) where
+  getDomain = lift . getDomain
+  setDomain = lift2 setDomain
+  getRelativeMIPGap = lift getRelativeMIPGap
+  setRelativeMIPGap = lift . setRelativeMIPGap
+  optimizeIP = lift optimizeIP
+
+instance IPMonad v c o m => IPMonad v c o (StateT s m) where
   getDomain = lift . getDomain
   setDomain = lift2 setDomain
   getRelativeMIPGap = lift getRelativeMIPGap

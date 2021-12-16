@@ -219,7 +219,7 @@ simplify (LinearExpression terms constant) =
     reduce [] = []
     reduce [(c, x)] = [(c, x)]
     reduce ((c, x) : (c', x') : xs)
-      | x == x' = (c + c', x) : reduce xs
+      | x == x' = reduce $ (c + c', x) : xs
       | otherwise = (c, x) : reduce ((c', x') : xs)
 
 -- | Reduce an expression to its value.

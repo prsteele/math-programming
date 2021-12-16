@@ -7,7 +7,7 @@ module Main where
 
 import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Reader
+import Control.Monad.State
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -15,19 +15,19 @@ import Math.Programming
 import Math.Programming.Glpk
 import Text.Printf
 
-newtype AppM a = AppM {unAppM :: ReaderT (M.Map Var GlpkVariable) Glpk a}
+newtype AppM a = AppM {unAppM :: StateT (M.Map Var GlpkVariable) Glpk a}
   deriving
     ( Functor,
       Applicative,
       Monad,
       MonadIO,
-      MonadReader (M.Map Var GlpkVariable),
+      MonadState (M.Map Var GlpkVariable),
       LPMonad GlpkVariable GlpkConstraint GlpkObjective,
       IPMonad GlpkVariable GlpkConstraint GlpkObjective
     )
 
 runAppM :: AppM a -> IO a
-runAppM = runGlpk . flip runReaderT M.empty . unAppM
+runAppM = runGlpk . flip evalStateT M.empty . unAppM
 
 main :: IO ()
 main = do
@@ -58,32 +58,33 @@ parseProblem input = mapM parseClause (T.lines input)
 solve :: Problem -> IO ()
 solve problem = do
   result <- runAppM (program problem)
-  pure ()
-
---  case result of
---    Nothing -> putStrLn "Unsatisfiable"
---    Just vars -> do
---      _ <- flip M.traverseWithKey vars $ \(k, v) -> printf "%s=%s" k v
---      pure ()
+  case result of
+    Nothing -> putStrLn "Unsatisfiable"
+    Just vars -> do
+      putStrLn "Satisfiable"
+      _ <- flip M.traverseWithKey vars $ \k v -> printf "%s=%f\n" k v
+      pure ()
 
 program ::
-  (MonadIO m, IPMonad v c o m, MonadReader (M.Map Var v) m) =>
+  (MonadIO m, IPMonad v c o m, MonadState (M.Map Var v) m) =>
   Problem ->
   m (Maybe (M.Map Var Double))
 program clauses = do
   forM_ clauses $ \(x, y, z) -> do
-    vx <- getVar (fst x)
-    vx @>=# 1
-  -- ((termExpr x .+. termExpr y .+. termExpr z) :: _) .>=# 1
+    vx <- termExpr x
+    vy <- termExpr y
+    vz <- termExpr z
+    vx .+. vy .+. vz .>=# 1
   status <- optimizeIP
   case status of
     Error -> liftIO (print "Error") >> pure Nothing
     Infeasible -> pure Nothing
     Optimal -> do
-      vars <- ask
+      vars <- get
+      forM_ vars (getVariableName >=> (liftIO . print))
       fmap pure (mapM getVariableValue vars)
 
-termExpr :: (IPMonad v c o m, MonadReader (M.Map T.Text v) m) => Term -> m (Expr v)
+termExpr :: (IPMonad v c o m, MonadState (M.Map Var v) m) => Term -> m (Expr v)
 termExpr (v, b) = do
   x <- getVar v
   pure $
@@ -91,9 +92,12 @@ termExpr (v, b) = do
       then var x
       else 1 #-@ x
 
-getVar :: (IPMonad v c o m, MonadReader (M.Map T.Text v) m) => Var -> m v
+getVar :: (IPMonad v c o m, MonadState (M.Map Var v) m) => Var -> m v
 getVar v = do
-  vars <- ask
+  vars <- get
   case M.lookup v vars of
-    Nothing -> binary
     Just x -> pure x
+    Nothing -> do
+      x <- binary
+      put (M.insert v x vars)
+      pure x

@@ -87,18 +87,15 @@ dietProblemTest =
    in do
         -- Create the decision variables
         amounts <- forM foods $ \food -> do
-          v <- free `within` amountInterval
-          setVariableName v (amountName food)
+          v <- free `within` amountInterval `named` amountName food
           return (food, v)
 
         -- Create the nutrient constraints
         forM_ nutrients $ \nutrient -> do
           let lhs = esum [nutrition nutrient food .* v | (food, v) <- amounts]
               (lower, upper) = nutrientBounds nutrient
-          cl <- lhs .<=# upper
-          setConstraintName cl (nutrientMaxName nutrient)
-          cu <- lhs .>=# lower
-          setConstraintName cu (nutrientMinName nutrient)
+          _ <- (lhs .<=# upper) `named` nutrientMaxName nutrient
+          _ <- (lhs .>=# lower) `named` nutrientMinName nutrient
           pure ()
 
         -- Set the objective

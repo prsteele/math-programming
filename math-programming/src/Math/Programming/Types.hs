@@ -19,27 +19,21 @@ import Math.Programming.LinExpr
 --
 -- This is a monadic context for formulating and solving linear
 -- programs.
-class Monad m => LPMonad v c o m | m -> v c o where
+class (Monad m, Named v m, Named c m, Named o m) => LPMonad v c o m | m -> v c o where
   addVariable :: m v
   deleteVariable :: v -> m ()
   getBounds :: v -> m Bounds
   setBounds :: v -> Bounds -> m ()
-  getVariableName :: v -> m T.Text
-  setVariableName :: v -> T.Text -> m ()
   getVariableValue :: v -> m Double
 
   addConstraint :: Inequality (Expr v) -> m c
   deleteConstraint :: c -> m ()
-  getConstraintName :: c -> m T.Text
-  setConstraintName :: c -> T.Text -> m ()
   getConstraintValue :: c -> m Double
 
   addObjective :: Expr v -> m o
   deleteObjective :: o -> m ()
   getSense :: o -> m Sense
   setSense :: o -> Sense -> m ()
-  getObjectiveName :: o -> m T.Text
-  setObjectiveName :: o -> T.Text -> m ()
   getObjectiveValue :: o -> m Double
 
   getTimeout :: m Double
@@ -53,18 +47,14 @@ compose2 = fmap fmap fmap
 lift2 :: (MonadTrans t, Monad m) => (a -> b -> m c) -> (a -> b -> t m c)
 lift2 = compose2 lift
 
-instance LPMonad v c o m => LPMonad v c o (ReaderT r m) where
+instance (LPMonad v c o m) => LPMonad v c o (ReaderT r m) where
   addVariable = lift addVariable
   deleteVariable = lift . deleteVariable
-  getVariableName = lift . getVariableName
-  setVariableName = lift2 setVariableName
   getVariableValue = lift . getVariableValue
   getBounds = lift . getBounds
   setBounds = lift2 setBounds
   addConstraint = lift . addConstraint
   deleteConstraint = lift . deleteConstraint
-  getConstraintName = lift . getConstraintName
-  setConstraintName = lift2 setConstraintName
   getConstraintValue = lift . getConstraintValue
 
   addObjective = lift . addObjective
@@ -72,25 +62,23 @@ instance LPMonad v c o m => LPMonad v c o (ReaderT r m) where
   getObjectiveValue = lift . getObjectiveValue
   getSense = lift . getSense
   setSense = lift2 setSense
-  getObjectiveName = lift . getObjectiveName
-  setObjectiveName = lift2 setObjectiveName
 
   getTimeout = getTimeout
   setTimeout = setTimeout
   optimizeLP = optimizeLP
+
+instance (Monad m, Named a m) => Named a (ReaderT r m) where
+  getName = lift . getName
+  setName = lift2 setName
 
 instance LPMonad v c o m => LPMonad v c o (StateT s m) where
   addVariable = lift addVariable
   deleteVariable = lift . deleteVariable
-  getVariableName = lift . getVariableName
-  setVariableName = lift2 setVariableName
   getVariableValue = lift . getVariableValue
   getBounds = lift . getBounds
   setBounds = lift2 setBounds
   addConstraint = lift . addConstraint
   deleteConstraint = lift . deleteConstraint
-  getConstraintName = lift . getConstraintName
-  setConstraintName = lift2 setConstraintName
   getConstraintValue = lift . getConstraintValue
 
   addObjective = lift . addObjective
@@ -98,12 +86,14 @@ instance LPMonad v c o m => LPMonad v c o (StateT s m) where
   getObjectiveValue = lift . getObjectiveValue
   getSense = lift . getSense
   setSense = lift2 setSense
-  getObjectiveName = lift . getObjectiveName
-  setObjectiveName = lift2 setObjectiveName
 
   getTimeout = getTimeout
   setTimeout = setTimeout
   optimizeLP = optimizeLP
+
+instance (Monad m, Named a m) => Named a (StateT r m) where
+  getName = lift . getName
+  setName = lift2 setName
 
 -- | A (mixed) integer program.
 --
@@ -132,6 +122,10 @@ instance IPMonad v c o m => IPMonad v c o (StateT s m) where
   getRelativeMIPGap = lift getRelativeMIPGap
   setRelativeMIPGap = lift . setRelativeMIPGap
   optimizeIP = lift optimizeIP
+
+class Named a m where
+  setName :: a -> T.Text -> m ()
+  getName :: a -> m T.Text
 
 -- | Whether a math program is minimizing or maximizing its objective.
 data Sense = Minimization | Maximization

@@ -1,4 +1,3 @@
-{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -22,6 +21,9 @@ newtype AppM a = AppM {unAppM :: StateT (M.Map Var GlpkVariable) Glpk a}
       Monad,
       MonadIO,
       MonadState (M.Map Var GlpkVariable),
+      Named GlpkVariable,
+      Named GlpkConstraint,
+      Named GlpkObjective,
       LPMonad GlpkVariable GlpkConstraint GlpkObjective,
       IPMonad GlpkVariable GlpkConstraint GlpkObjective
     )
@@ -81,7 +83,7 @@ program clauses = do
     Infeasible -> pure Nothing
     Optimal -> do
       vars <- get
-      forM_ vars (getVariableName >=> (liftIO . print))
+      forM_ vars (getName >=> (liftIO . print))
       fmap pure (mapM getVariableValue vars)
 
 termExpr :: (IPMonad v c o m, MonadState (M.Map Var v) m) => Term -> m (Expr v)

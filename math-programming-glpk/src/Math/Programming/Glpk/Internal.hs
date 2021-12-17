@@ -5,8 +5,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 -- | This module contains the full definitions backing the simplified API
 -- exposed in 'Math.Programming.Glpk'.
@@ -119,15 +117,11 @@ type Glpk = GlpkT IO
 instance LPMonad GlpkVariable GlpkConstraint GlpkObjective Glpk where
   addVariable = addVariable'
   deleteVariable = deleteVariable'
-  getVariableName = getVariableName'
-  setVariableName = setVariableName'
   getVariableValue = getVariableValue'
   getBounds = getVariableBounds'
   setBounds = setVariableBounds'
   addConstraint = addConstraint'
   deleteConstraint = deleteConstraint'
-  getConstraintName = getConstraintName'
-  setConstraintName = setConstraintName'
   getConstraintValue = getDualValue
 
   addObjective = addObjective'
@@ -135,12 +129,22 @@ instance LPMonad GlpkVariable GlpkConstraint GlpkObjective Glpk where
   getObjectiveValue = getObjectiveValue'
   getSense = getSense'
   setSense = setSense'
-  getObjectiveName = getObjectiveName'
-  setObjectiveName = setObjectiveName'
 
   getTimeout = getTimeout'
   setTimeout = setTimeout'
   optimizeLP = optimizeLP'
+
+instance Named GlpkVariable Glpk where
+  getName = getVariableName'
+  setName = setVariableName'
+
+instance Named GlpkConstraint Glpk where
+  getName = getConstraintName'
+  setName = setConstraintName'
+
+instance Named GlpkObjective Glpk where
+  getName = getObjectiveName'
+  setName = setObjectiveName'
 
 instance IPMonad GlpkVariable GlpkConstraint GlpkObjective Glpk where
   getDomain = getVariableDomain'

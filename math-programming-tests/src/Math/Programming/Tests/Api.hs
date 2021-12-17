@@ -24,9 +24,8 @@ makeApiTests runner =
 setGetVariableName :: (MonadIO m, LPMonad v c o m) => m ()
 setGetVariableName = do
   let name = "foo"
-  x <- free
-  setVariableName x name
-  vName <- getVariableName x
+  x <- free `named` name
+  vName <- getName x
   liftIO $ vName `shouldBe` name
 
 -- | We should be able to set and retrieve constraint names
@@ -34,7 +33,6 @@ setGetConstraintName :: (MonadIO m, LPMonad v c o m) => m ()
 setGetConstraintName = do
   let name = "foo"
   x <- free
-  c <- x @>=# 0
-  setConstraintName c name
-  cName <- getConstraintName c
+  c <- (x @>=# 0) `named` name
+  cName <- getName c
   liftIO $ cName `shouldBe` name

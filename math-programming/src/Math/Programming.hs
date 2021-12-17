@@ -13,6 +13,7 @@ module Math.Programming
     Bounds (..),
     SolutionStatus (..),
     Sense (..),
+    Named (..),
 
     -- ** Integer programs
     IPMonad (..),
@@ -95,7 +96,7 @@ module Math.Programming
 
     -- ** Utilities
     evalExpr,
-    -- named,
+    named,
   )
 where
 

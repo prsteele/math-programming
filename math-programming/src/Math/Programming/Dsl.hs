@@ -7,6 +7,7 @@
 module Math.Programming.Dsl where
 
 import Data.Functor
+import qualified Data.Text as T
 import Math.Programming.LinExpr
 import Math.Programming.Types
 
@@ -86,18 +87,18 @@ asKind make dom = do
   setDomain variable dom
   pure variable
 
--- -- | Name a variable, constraint, or objective.
--- --
--- -- This function is designed to be used as an infix operator, e.g.
--- --
--- -- @
--- -- 'free' \``named`\` "X_1"
--- -- @
--- named :: (Named v c o m a) => m a -> T.Text -> m a
--- named make n = do
---   x <- make
---   setName x n
---   pure x
+-- | Name a variable, constraint, or objective.
+--
+-- This function is designed to be used as an infix operator, e.g.
+--
+-- @
+-- 'free' \``named`\` "X_1"
+-- @
+named :: (Monad m, Named a m) => m a -> T.Text -> m a
+named make n = do
+  x <- make
+  setName x n
+  pure x
 
 (#<=@) :: LPMonad v c o m => Double -> v -> m c
 (#<=.) :: LPMonad v c o m => Double -> Expr v -> m c

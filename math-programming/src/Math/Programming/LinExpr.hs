@@ -4,6 +4,7 @@
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE TupleSections #-}
 
+-- | Linear expressions of variables.
 module Math.Programming.LinExpr where
 
 import Data.List (foldl', sortOn)
@@ -69,6 +70,7 @@ con = LinExpr []
 vsum :: Num a => [b] -> LinExpr a b
 vsum = flip LinExpr 0 . fmap (1,)
 
+-- | The sum of linear expressions.
 esum :: Num a => Foldable t => t (LinExpr a b) -> LinExpr a b
 esum = foldl' (.+) mempty
 

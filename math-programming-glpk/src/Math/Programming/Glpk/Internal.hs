@@ -75,7 +75,7 @@ data GlpkEnv = GlpkEnv
 data GlpkPtr a = GlpkPtr
   { -- | The unique identifier of this reference.
     --
-    -- Objects of this type, when generated, will have a fresh '_refId' value.
+    -- Objects of this type, when generated, will have a fresh '_glpkPtrId' value.
     _glpkPtrId :: Integer,
     -- | Whether this reference has been deleted from the problem.
     _glpkPtrDeleted :: IORef Bool,

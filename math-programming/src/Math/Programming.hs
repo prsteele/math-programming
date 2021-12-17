@@ -1,102 +1,92 @@
 -- | A library for modeling and solving linear and integer programs.
 --
--- This library is merely a frontend to various solver backends. At the
--- time this was written, the only known supported backend is
--- <https://github.com/prsteele/math-programming-glpk GLPK>.
+-- This library is merely a frontend to various solver backends. At
+-- the time this was written, the only known supported backend is
+-- <https://github.com/prsteele/math-programming/blob/main/math-programming-glpk/README.md GLPK>.
+--
+-- This page includes a high-level overview of the model building DSL,
+-- as well as a deeper dive into the core monadic interface.
 module Math.Programming
-  ( -- * Math programs
-    -- $mathprograms
-
-    -- ** Linear programs
-    MonadLP (..),
-    Expr,
-    Bounds (..),
-    SolutionStatus (..),
-    Sense (..),
-    Named (..),
-
-    -- ** Integer programs
-    MonadIP (..),
-    Domain (..),
-
-    -- * Model-building DSL
+  ( -- * Model-building DSL
     -- $models
 
     -- ** Creating variables
-    -- $variables
 
     -- *** Continuous variables
     free,
+    bounded,
     nonNeg,
     nonPos,
-    bounded,
-    within,
 
-    -- *** Integer variables
+    -- *** Discrete variables
     integer,
     binary,
     nonNegInteger,
     nonPosInteger,
-    asKind,
 
-    -- ** Linear expressions
+    -- *** Modifying variables
+    -- $modifiers
+    within,
+    asKind,
+    named,
+
+    -- ** Creating constraints
+    -- $constraints
+
+    -- *** Equality constraints
+    (.==.),
+    (#==.),
+    (.==#),
+
+    -- *** Less-than constraints
+    (.<=.),
+    (#<=.),
+    (.<=#),
+
+    -- *** Greater-than constraints
+    (.>=.),
+    (#>=.),
+    (.>=#),
+
+    -- ** Creating objectives
+    minimize,
+    maximize,
+
+    -- ** Creating linear expressions
     -- $expressions
-    LinExpr (..),
+    (.*),
+    (.+),
+    (.-),
+    (./),
     eval,
     simplify,
     var,
     con,
     vsum,
     esum,
-    (.*),
-    (.+),
-    (.-),
-    (./),
 
-    -- ** Constraints
-    -- $constraints
-    Inequality (..),
+    -- ** Naming model components
+    -- $naming
 
-    -- *** Less-than constraints
-    -- $lt
-    (#<=@),
-    (#<=.),
-    (@<=#),
-    (@<=@),
-    (@<=.),
-    (.<=#),
-    (.<=@),
-    (.<=.),
+    -- * Math programs
+    -- $mathprograms
 
-    -- *** Greater-than constraints
-    -- $gt
-    (#>=@),
-    (#>=.),
-    (@>=#),
-    (@>=@),
-    (@>=.),
-    (.>=#),
-    (.>=@),
-    (.>=.),
+    -- ** Linear programs
+    MonadLP (..),
 
-    -- *** Equality constraints
-    -- $eq
-    (#==@),
-    (#==.),
-    (@==#),
-    (@==@),
-    (@==.),
-    (.==#),
-    (.==@),
-    (.==.),
+    -- ** Integer programs
+    MonadIP (..),
+    Domain (..),
 
-    -- ** Specifying objectives
-    minimize,
-    maximize,
-
-    -- ** Utilities
+    -- * Other types and functions
     evalExpr,
-    named,
+    Expr,
+    Bounds (..),
+    SolutionStatus (..),
+    Sense (..),
+    Named (..),
+    Inequality (..),
+    LinExpr (..),
   )
 where
 
@@ -104,141 +94,48 @@ import Math.Programming.Dsl
 import Math.Programming.LinExpr
 import Math.Programming.Types
 
--- $mathprograms
+-- $introduction
 --
--- The 'MonadLP' provides all the primitives necessary to formulate
--- and solve linear programs; the 'MonadIP' provides the same for
--- integer programs. However, you should not often need to use these
--- APIs directly, as we provide more user-friendly functions wrapping
--- these low-level functions below.
+-- This library provides a monadic interface for building and solving
+-- linear and integer programs.
 
 -- $models
 --
--- The functions in the 'MonadLP' and 'MonadIP' typeclasses are
--- designed to interface with low-level solver backends. We provide a
--- cleaner interface in the following sections.
+-- We provide a monadic DSL for specifying math programs. This DSL
+-- builds up programs statefully, rather than building some pure,
+-- abstract representation of a math program.
 
--- $variables
---
--- 'MonadLP' provides 'addVariable' and 'setVariableBounds', and
--- 'MonadIP' additionally provides 'setVariableDomain'. While
--- sufficient to create your programs, you are encouraged to use the
--- more natural functions below.
+-- $modifiers
+-- Regardless of the helper functions used above to create a
+-- variable, you can modify its behavior using the following
+-- modifiers.
 
 -- $expressions
 --
--- The module 'Math.Programming.LinExpr' provides operators
--- to build up 'LinExpr' objects using declared variables.
-
--- $addition
+-- Since both constraints and objectives involve linear expressions of
+-- variables, we need to be able to manipulate them.
 --
--- We can summarize the addition operators with the table
---
--- +-----------------+--------+--------+------------------+
--- |                 |Constant|Variable|    Expression    |
--- +-----------------+--------+--------+------------------+
--- |Constant         | '+'    | '#+@'  | '#+.'            |
--- +-----------------+--------+--------+------------------+
--- |Variable         | '@+#'  | '@+@'  | '@+.'            |
--- +-----------------+--------+--------+------------------+
--- |Expression       | '.+#'  | '.+@'  | '.+.'            |
--- +-----------------+--------+--------+------------------+
-
--- $subtraction
---
--- We can summarize the subtraction operators with the table
---
--- +-----------------+--------+--------+------------------+
--- |                 |Constant|Variable|    Expression    |
--- +-----------------+--------+--------+------------------+
--- |Constant         | '-'    | '#-@'  | '#-.'            |
--- +-----------------+--------+--------+------------------+
--- |Variable         | '@-#'  | '@-@'  | '@-.'            |
--- +-----------------+--------+--------+------------------+
--- |Expression       | '.-#'  | '.-@'  | '.-.'            |
--- +-----------------+--------+--------+------------------+
-
--- $multiplication
---
--- We can summarize the multiplication operators with the table
---
--- +-----------------+--------+--------+------------------+
--- |                 |Constant|Variable|    Expression    |
--- +-----------------+--------+--------+------------------+
--- |Constant         | '*'    | '#*@'  | '#*.'            |
--- +-----------------+--------+--------+------------------+
--- |Variable         | '@*#'  |        |                  |
--- +-----------------+--------+--------+------------------+
--- |Expression       | '.*#'  |        |                  |
--- +-----------------+--------+--------+------------------+
---
--- As there are few possibilities for valid multiplication, it can be
--- convenient to define e.g. @.*@ or some other short operator as an
--- alias for '#*@'.
-
--- $division
---
--- We can summarize the multiplication operators with the table
---
--- +-----------------+--------+--------+------------------+
--- |                 |Constant|Variable|    Expression    |
--- +-----------------+--------+--------+------------------+
--- |Constant         | '/'    |        |                  |
--- +-----------------+--------+--------+------------------+
--- |Variable         | '@/#'  |        |                  |
--- +-----------------+--------+--------+------------------+
--- |Expression       | './#'  |        |                  |
--- +-----------------+--------+--------+------------------+
---
--- As there are few possibilities for valid division, it
--- can be convenient to define e.g. @./@ or some other short operator
--- as an alias for '@/#'.
+-- The core of manipulating linear expressions are the '.*' operator,
+-- which creates a term in an expression, and '.+', which combines
+-- terms into a single expression.
 
 -- $constraints
 --
--- The 'MonadLP' provides the 'addConstraint' function. However, you
--- will typically use the operators below to directly apply
--- constraints to the model. We follow the same conventions as with
--- our arithmetic operators.
+-- We provide a number of operators to create constraints from
+-- different types of equality and inequality constraints. There are
+-- three variants of each constraint type, based on whether the
+-- left-hand side, right-hand side, or both sides of the constraint
+-- are expressions. The mnemonic is that @.@ characters point to
+-- expressions, while @#@ characters point to constants.
 
--- $lt
+-- $naming
 --
--- We can summarize the various inquality operators in the following table.
---
--- +-----------------+--------+--------+------------------+
--- |                 |Constant|Variable|    Expression    |
--- +-----------------+--------+--------+------------------+
--- |Constant         |        | '#<=@' | '#<=.'           |
--- +-----------------+--------+--------+------------------+
--- |Variable         | '@<=#' | '@<=@' | '@<=.'           |
--- +-----------------+--------+--------+------------------+
--- |Expression       | '.<=#' | '.<=@' | '.<=.'           |
--- +-----------------+--------+--------+------------------+
+-- The 'Named' class allows us to get and set the names of model
+-- variables, constraints, and objectives. The 'named' combinator
+-- makes it easy to name these as they are created.
 
--- $gt
+-- $mathprograms
 --
--- We can summarize the various inquality operators in the following table.
---
--- +-----------------+--------+--------+------------------+
--- |                 |Constant|Variable|    Expression    |
--- +-----------------+--------+--------+------------------+
--- |Constant         |        | '#>=@' | '#>=.'           |
--- +-----------------+--------+--------+------------------+
--- |Variable         | '@>=#' | '@>=@' | '@>=.'           |
--- +-----------------+--------+--------+------------------+
--- |Expression       | '.>=#' | '.>=@' | '.>=.'           |
--- +-----------------+--------+--------+------------------+
-
--- $eq
---
--- We can summarize the various inquality operators in the following table.
---
--- +-----------------+--------+--------+------------------+
--- |                 |Constant|Variable|    Expression    |
--- +-----------------+--------+--------+------------------+
--- |Constant         |        | '#==@' | '#==.'           |
--- +-----------------+--------+--------+------------------+
--- |Variable         | '@==#' | '@==@' | '@==.'           |
--- +-----------------+--------+--------+------------------+
--- |Expression       | '.==#' | '.==@' | '.==.'           |
--- +-----------------+--------+--------+------------------+
+-- The 'MonadLP' and 'MonadIP' classes provide low-level APIs for
+-- defining linear and integer programs, respectively, although the
+-- high-level DSL will typically be easier to work with.

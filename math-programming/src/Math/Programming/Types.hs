@@ -7,6 +7,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+-- | Data and class definitions for the core math programming
+-- interface.
 module Math.Programming.Types where
 
 import Control.Monad.Trans.Class
@@ -34,15 +36,44 @@ instance (Monad m, Named a m) => Named a (StateT r m) where
 -- | A linear program.
 --
 -- This is a monadic context for formulating and solving linear
--- programs.
+-- programs. The types @v@, @c@, and @o@ refer to the types of
+-- variables, constraints, and objectives, respectively, used by a
+-- particular solver backend.
 class (Monad m, Named v m, Named c m, Named o m) => MonadLP v c o m | m -> v c o where
+  -- | Add a new (free) variable to the model.
+  --
+  -- See 'Math.Programming.Dsl.free', 'Math.Programming.Dsl.bounded',
+  -- 'Math.Programming.Dsl.nonNeg', and 'Math.Programming.Dsl.nonPos'
+  -- as higher-level alternatives.
   addVariable :: m v
+
+  -- | Remove a variable from the model.
   deleteVariable :: v -> m ()
+
+  -- | Retrieve the current bounds associated with a variable.
   getBounds :: v -> m Bounds
+
+  -- | Apply bounds to a variable.
+  --
+  -- See 'Math.Programming.Dsl.within' as a higher-level alternative.
   setBounds :: v -> Bounds -> m ()
+
+  -- | Get the value of a variable in the current solution.
+  --
+  -- This value could be arbitrary if no solve has been completed, or
+  -- a solve produced an infeasible or unbounded solution.
   getVariableValue :: v -> m Double
 
+  -- | Add a constraint representing the given inequality to the model.
+  --
+  -- See the 'Math.Programming.Dsl..==.', 'Math.Programming.Dsl..==#',
+  -- 'Math.Programming.Dsl.#==.', 'Math.Programming.Dsl..>=.',
+  -- 'Math.Programming.Dsl..>=#', 'Math.Programming.Dsl.#>=.',
+  -- 'Math.Programming.Dsl..<=.', 'Math.Programming.Dsl..<=#', and
+  -- 'Math.Programming.Dsl.#<=.' functions as higher-level
+  -- alternatives.
   addConstraint :: Inequality (Expr v) -> m c
+
   deleteConstraint :: c -> m ()
   getConstraintValue :: c -> m Double
 
@@ -57,9 +88,11 @@ class (Monad m, Named v m, Named c m, Named o m) => MonadLP v c o m | m -> v c o
 
   optimizeLP :: m SolutionStatus
 
+-- | Function composition involving a 2-argument function.
 compose2 :: (c -> d) -> (a -> b -> c) -> (a -> b -> d)
 compose2 = fmap fmap fmap
 
+-- | Monadic lifting  involving a 2-argument function.
 lift2 :: (MonadTrans t, Monad m) => (a -> b -> m c) -> (a -> b -> t m c)
 lift2 = compose2 lift
 
@@ -205,6 +238,6 @@ data Inequality a
       Traversable
     )
 
--- | A convient shorthand for the type of linear expressions used in a
--- given model.
+-- | A convient shorthand for the type of linear expressions used in
+-- models.
 type Expr = LinExpr Double

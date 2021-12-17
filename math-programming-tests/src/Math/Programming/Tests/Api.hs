@@ -33,6 +33,6 @@ setGetConstraintName :: (MonadIO m, MonadLP v c o m) => m ()
 setGetConstraintName = do
   let name = "foo"
   x <- free
-  c <- (x @>=# 0) `named` name
+  c <- (var x .>=# 0) `named` name
   cName <- getName c
   liftIO $ cName `shouldBe` name

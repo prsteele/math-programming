@@ -50,8 +50,11 @@ bounded lo hi = within addVariable (Interval lo hi)
 -- This function is designed to be used as an infix operator, e.g.
 --
 -- @
--- 'create' \``within`\` 'NonNegativeReals'
+-- 'integer' \``within`\` 'Interval 3 7'
 -- @
+--
+-- creates an integer variable that can take on values 3, 4, 5, 6, or
+-- 7.
 within :: MonadLP v c o m => m v -> Bounds -> m v
 within makeVar bounds = do
   variable <- makeVar
@@ -79,7 +82,7 @@ nonPosInteger = addVariable `asKind` Integer `within` NonPositiveReals
 -- This function is designed to be used as an infix operator, e.g.
 --
 -- @
--- 'create' \``asKind`\` 'Binary'
+-- 'free' \``asKind`\` 'Binary'
 -- @
 asKind :: MonadIP v c o m => m v -> Domain -> m v
 asKind make dom = do
@@ -100,122 +103,56 @@ named make n = do
   setName x n
   pure x
 
-(#<=@) :: MonadLP v c o m => Double -> v -> m c
-(#<=.) :: MonadLP v c o m => Double -> Expr v -> m c
-(@<=#) :: MonadLP v c o m => v -> Double -> m c
-(@<=@) :: MonadLP v c o m => v -> v -> m c
-(@<=.) :: MonadLP v c o m => v -> Expr v -> m c
-(.<=#) :: MonadLP v c o m => Expr v -> Double -> m c
-(.<=@) :: MonadLP v c o m => Expr v -> v -> m c
+-- | A less-than or equal-to constraint
 (.<=.) :: MonadLP v c o m => Expr v -> Expr v -> m c
-(#>=@) :: MonadLP v c o m => Double -> v -> m c
-(#>=.) :: MonadLP v c o m => Double -> Expr v -> m c
-(@>=#) :: MonadLP v c o m => v -> Double -> m c
-(@>=@) :: MonadLP v c o m => v -> v -> m c
-(@>=.) :: MonadLP v c o m => v -> Expr v -> m c
-(.>=#) :: MonadLP v c o m => Expr v -> Double -> m c
-(.>=@) :: MonadLP v c o m => Expr v -> v -> m c
+(.<=.) x y = addConstraint $ Inequality LT x y
+
+-- | A less-than or equal-to constraint with a numeric left-hand side
+(#<=.) :: MonadLP v c o m => Double -> Expr v -> m c
+(#<=.) x y = con x .<=. y
+
+-- | A less-than or equal-to constraint with a numeric right-hand side
+(.<=#) :: MonadLP v c o m => Expr v -> Double -> m c
+(.<=#) x y = x .<=. con y
+
+-- | A greater-than or equal-to constraint
 (.>=.) :: MonadLP v c o m => Expr v -> Expr v -> m c
-(#==@) :: MonadLP v c o m => Double -> v -> m c
-(#==.) :: MonadLP v c o m => Double -> Expr v -> m c
-(@==#) :: MonadLP v c o m => v -> Double -> m c
-(@==@) :: MonadLP v c o m => v -> v -> m c
-(@==.) :: MonadLP v c o m => v -> Expr v -> m c
-(.==#) :: MonadLP v c o m => Expr v -> Double -> m c
-(.==@) :: MonadLP v c o m => Expr v -> v -> m c
+(.>=.) x y = addConstraint $ Inequality GT x y
+
+-- | A greater-than or equal-to constraint with a numeric left-hand side
+(#>=.) :: MonadLP v c o m => Double -> Expr v -> m c
+(#>=.) x y = con x .>=. y
+
+-- | A greater-than or equal-to constraint with a numeric right-hand side
+(.>=#) :: MonadLP v c o m => Expr v -> Double -> m c
+(.>=#) x y = x .>=. con y
+
+-- | An equality constraint
 (.==.) :: MonadLP v c o m => Expr v -> Expr v -> m c
-x #<=@ y = addConstraint $ Inequality LT (con x) (var y)
+(.==.) x y = addConstraint $ Inequality EQ x y
 
-x #<=. y = addConstraint $ Inequality LT (con x) y
+-- | An equality constraint with a numeric left-hand side
+(#==.) :: MonadLP v c o m => Double -> Expr v -> m c
+(#==.) x y = con x .==. y
 
-x @<=# y = addConstraint $ Inequality LT (var x) (con y)
-
-x @<=@ y = addConstraint $ Inequality LT (var x) (var y)
-
-x @<=. y = addConstraint $ Inequality LT (var x) y
-
-x .<=# y = addConstraint $ Inequality LT x (con y)
-
-x .<=@ y = addConstraint $ Inequality LT x (var y)
-
-x .<=. y = addConstraint $ Inequality LT x y
-
-x #>=@ y = addConstraint $ Inequality GT (con x) (var y)
-
-x #>=. y = addConstraint $ Inequality GT (con x) y
-
-x @>=# y = addConstraint $ Inequality GT (var x) (con y)
-
-x @>=@ y = addConstraint $ Inequality GT (var x) (var y)
-
-x @>=. y = addConstraint $ Inequality GT (var x) y
-
-x .>=# y = addConstraint $ Inequality GT x (con y)
-
-x .>=@ y = addConstraint $ Inequality GT x (var y)
-
-x .>=. y = addConstraint $ Inequality GT x y
-
-x #==@ y = addConstraint $ Inequality EQ (con x) (var y)
-
-x #==. y = addConstraint $ Inequality EQ (con x) y
-
-x @==# y = addConstraint $ Inequality EQ (var x) (con y)
-
-x @==@ y = addConstraint $ Inequality EQ (var x) (var y)
-
-x @==. y = addConstraint $ Inequality EQ (var x) y
-
-x .==# y = addConstraint $ Inequality EQ x (con y)
-
-x .==@ y = addConstraint $ Inequality EQ x (var y)
-
-x .==. y = addConstraint $ Inequality EQ x y
-
-infix 4 #<=@
+-- | An equality constraint with a numeric right-hand side
+(.==#) :: MonadLP v c o m => Expr v -> Double -> m c
+(.==#) x y = x .==. con y
 
 infix 4 #<=.
 
-infix 4 @<=#
-
-infix 4 @<=@
-
-infix 4 @<=.
-
 infix 4 .<=#
-
-infix 4 .<=@
 
 infix 4 .<=.
 
-infix 4 #>=@
-
 infix 4 #>=.
-
-infix 4 @>=#
-
-infix 4 @>=@
-
-infix 4 @>=.
 
 infix 4 .>=#
 
-infix 4 .>=@
-
 infix 4 .>=.
-
-infix 4 #==@
 
 infix 4 #==.
 
-infix 4 @==#
-
-infix 4 @==@
-
-infix 4 @==.
-
 infix 4 .==#
-
-infix 4 .==@
 
 infix 4 .==.

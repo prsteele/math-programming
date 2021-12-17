@@ -65,22 +65,20 @@ data GlpkEnv = GlpkEnv
     _glpkLastSolveType :: IORef (Maybe SolveType)
   }
 
--- | A pointer to an IORef, labeled by a unique value.
+-- | A pointer to a GLPK row or column.
 --
--- Although variables and constraints are labeled interally as
--- integers, GLPK will re-use integer labels when variables or
--- constraints are deleted and new ones are added. To ensure that we
--- do not confuse objects, we mark all created variables and
--- constraints with a unique integer value.
+-- We assign an immutable unique value to each 'GlpkPtr' we create.
+--
+-- Internally, GLPK refers to variables and constraints by their
+-- column and row indices, respectively. These indices can change when
+-- rows and columns are deleted, so we update this value as necessary.
 data GlpkPtr a = GlpkPtr
-  { -- | The unique identifier of this reference.
-    --
-    -- Objects of this type, when generated, will have a fresh '_glpkPtrId' value.
+  { -- | An immutable, unique value associated with this pointer.
     _glpkPtrId :: Integer,
-    -- | Whether this reference has been deleted from the problem.
-    _glpkPtrDeleted :: IORef Bool,
     -- | The referenced object.
-    _glpkPtrRef :: IORef a
+    _glpkPtrRef :: IORef a,
+    -- | Whether this reference has been deleted from the problem.
+    _glpkPtrDeleted :: IORef Bool
   }
 
 instance Eq (GlpkPtr a) where
@@ -234,13 +232,16 @@ askVariablesRef = askGlpk _glpkVariables
 askConstraintsRef :: Glpk (IORef [GlpkConstraint])
 askConstraintsRef = askGlpk _glpkConstraints
 
+-- | Note that a new row or column has been added to the to the problem.
 register :: GlpkPtr a -> IORef [GlpkPtr a] -> Glpk ()
 register newPtr ptrRefs = do
   liftIO $ modifyIORef' ptrRefs (newPtr :)
 
+-- | Note that a row or column has been deleted from the problem, and
+-- update row or column indices accordingly.
 unregister :: Integral a => GlpkPtr a -> IORef [GlpkPtr a] -> Glpk ()
 unregister deletedPtr ptrsRef =
-  let update removed (GlpkPtr _ _ ptr) = do
+  let update removed (GlpkPtr _ ptr _) = do
         z <- readIORef ptr
         when (z > removed) $
           modifyIORef' ptr pred
@@ -273,8 +274,8 @@ addVariable' = do
     column <- glp_add_cols problem 1
     glp_set_col_bnds problem column glpkFree 0 0
     GlpkPtr (fromIntegral column)
-      <$> newIORef False
-      <*> newIORef column
+      <$> newIORef column
+      <*> newIORef False
 
   askVariablesRef >>= register variable
   setVariableName' variable (defaultVariableName variable)
@@ -338,8 +339,8 @@ addConstraint' (Inequality ordering lhs rhs) =
               glp_set_mat_row problem row numVars columnArr coefficientArr
 
           GlpkPtr (fromIntegral row)
-            <$> newIORef False
-            <*> newIORef row
+            <$> newIORef row
+            <*> newIORef False
 
         askConstraintsRef >>= register constraintPtr
         setConstraintName' constraintPtr (defaultConstraintName constraintPtr)

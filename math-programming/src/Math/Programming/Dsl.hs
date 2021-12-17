@@ -7,8 +7,6 @@
 
 module Math.Programming.Dsl where
 
-import Control.Monad
-import Control.Monad.Identity
 import Data.Functor
 import qualified Data.Text as T
 import Math.Programming.LinExpr

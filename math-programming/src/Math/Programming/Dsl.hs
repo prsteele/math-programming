@@ -92,7 +92,7 @@ asKind make dom = do
 -- This function is designed to be used as an infix operator, e.g.
 --
 -- @
--- 'free' \``named`\` "X_1"
+-- 'free' \``named`\` \"X_1\"
 -- @
 named :: (Monad m, Named a m) => m a -> T.Text -> m a
 named make n = do

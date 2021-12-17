@@ -15,6 +15,21 @@ import Control.Monad.Trans.State
 import qualified Data.Text as T
 import Math.Programming.LinExpr
 
+-- | The class of things that can be named.
+--
+-- This is used to name variables, constraints, and objectives in
+-- linear programs. See also the 'Math.Programming.named' helper function
+class Named a m where
+  setName :: a -> T.Text -> m ()
+  getName :: a -> m T.Text
+
+instance (Monad m, Named a m) => Named a (ReaderT r m) where
+  getName = lift . getName
+  setName = lift2 setName
+
+instance (Monad m, Named a m) => Named a (StateT r m) where
+  getName = lift . getName
+  setName = lift2 setName
 -- | A linear program.
 --
 -- This is a monadic context for formulating and solving linear
@@ -67,10 +82,6 @@ instance (LPMonad v c o m) => LPMonad v c o (ReaderT r m) where
   setTimeout = setTimeout
   optimizeLP = optimizeLP
 
-instance (Monad m, Named a m) => Named a (ReaderT r m) where
-  getName = lift . getName
-  setName = lift2 setName
-
 instance LPMonad v c o m => LPMonad v c o (StateT s m) where
   addVariable = lift addVariable
   deleteVariable = lift . deleteVariable
@@ -90,10 +101,6 @@ instance LPMonad v c o m => LPMonad v c o (StateT s m) where
   getTimeout = getTimeout
   setTimeout = setTimeout
   optimizeLP = optimizeLP
-
-instance (Monad m, Named a m) => Named a (StateT r m) where
-  getName = lift . getName
-  setName = lift2 setName
 
 -- | A (mixed) integer program.
 --
@@ -122,10 +129,6 @@ instance IPMonad v c o m => IPMonad v c o (StateT s m) where
   getRelativeMIPGap = lift getRelativeMIPGap
   setRelativeMIPGap = lift . setRelativeMIPGap
   optimizeIP = lift optimizeIP
-
-class Named a m where
-  setName :: a -> T.Text -> m ()
-  getName :: a -> m T.Text
 
 -- | Whether a math program is minimizing or maximizing its objective.
 data Sense = Minimization | Maximization

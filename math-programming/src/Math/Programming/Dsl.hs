@@ -2,14 +2,18 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Math.Programming.Dsl where
 
+import Control.Monad
+import Control.Monad.Identity
 import Data.Functor
 import qualified Data.Text as T
 import Math.Programming.LinExpr
 import Math.Programming.Types
+import Text.Printf
 
 -- | Create an objective to be minimized.
 minimize :: MonadLP v c o m => Expr v -> m o
@@ -156,3 +160,9 @@ infix 4 #==.
 infix 4 .==#
 
 infix 4 .==.
+
+formatExpr :: (Monad m, Named v m) => Expr v -> m T.Text
+formatExpr (LinExpr terms coef) = do
+  names <- mapM (traverse getName) terms
+  let strTerms = fmap (T.pack . uncurry (printf "%f * %s")) names
+  pure $ T.intercalate " + " (strTerms <> [T.pack (show coef)])

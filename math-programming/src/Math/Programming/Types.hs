@@ -11,6 +11,7 @@
 -- interface.
 module Math.Programming.Types where
 
+import Control.Monad.Identity
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.State
@@ -32,6 +33,23 @@ instance (Monad m, Named a m) => Named a (ReaderT r m) where
 instance (Monad m, Named a m) => Named a (StateT r m) where
   getName = lift . getName
   setName = lift2 setName
+
+-- | This instance is really only used for testing.
+--
+-- In particular,
+--
+-- @
+-- 'setName' x y >> 'getName' x
+-- @
+--
+-- does not necessarily produce the same result as
+--
+-- @
+-- pure y
+-- @
+instance Named T.Text Identity where
+  getName = pure
+  setName _ _ = pure ()
 
 -- | A linear program.
 --

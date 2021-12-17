@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Math.Programming.TypesSpec where
+module Math.Programming.LinExprSpec where
 
 import Control.Monad
 import Data.Ratio
@@ -11,12 +11,14 @@ import Test.Hspec.QuickCheck
 import Test.QuickCheck
 
 spec :: Spec
-spec = describe "LinearExpression tests" $ do
-  prop "satisfies addititive commutivity" commutativityProp
-  prop "satisfies addititive associativity" additiveAssociativityProp
-  prop "satisfies coefficient commutativity" coefficientCommutativityProp
-  simplifyRegressions
-  prop "simplifies expressions properly" simplifyProp
+spec = do
+  describe "algebraic properties" $ do
+    prop "satisfies addititive commutivity" commutativityProp
+    prop "satisfies addititive associativity" additiveAssociativityProp
+    prop "satisfies coefficient commutativity" coefficientCommutativityProp
+  describe "simplification" $ do
+    simplifyRegressions
+    prop "simplification preserves value" simplifyProp
 
 type ExactExpr = LinExpr (Ratio Integer) (Ratio Integer)
 

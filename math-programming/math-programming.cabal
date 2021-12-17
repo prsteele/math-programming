@@ -38,8 +38,11 @@ test-suite math-programming-test-suite
   main-is:           Spec.hs
   hs-source-dirs:    test
   ghc-options:       -threaded -with-rtsopts=-N -Wall
-  other-modules:     Math.Programming.TypesSpec
+  other-modules:     Math.Programming.LinExprSpec
+                   , Math.Programming.DslSpec
   build-depends:     math-programming
                    , base       ^>=4.14.1.0
-                   , hspec      ^>=2.7.10
                    , QuickCheck ^>=2.14.2
+                   , hspec      ^>=2.7.10
+                   , mtl        ^>=2.2.2
+                   , text       ^>=1.2.4.1

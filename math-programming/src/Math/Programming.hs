@@ -80,6 +80,7 @@ module Math.Programming
 
     -- * Other types and functions
     evalExpr,
+    formatExpr,
     Expr,
     Bounds (..),
     SolutionStatus (..),

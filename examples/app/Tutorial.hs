@@ -3,7 +3,9 @@
 
 module Main where
 
+import Control.Monad
 import Control.Monad.IO.Class (liftIO)
+import qualified Data.Text.IO as TIO
 import Math.Programming
 import Math.Programming.Glpk
 import Text.Printf
@@ -17,7 +19,16 @@ main = runGlpk $ do
   c1 <- 1 .* x .+ 1 .* y .+ 2 .* z .==# 10
   c2 <- 3 .* x .+ 2 .* y .+ 1 .* z .==# 5
 
-  obj <- minimize $ vsum [x, y, z]
+  let objExpr = vsum [x, y, z]
+  obj <- minimize objExpr
+
+  objExprS <- formatExpr objExpr
+  liftIO . TIO.putStrLn $ "min " <> objExprS
+
+  let displayExpr :: Expr GlpkVariable -> Glpk ()
+      displayExpr = formatExpr >=> liftIO . TIO.putStrLn
+
+  liftIO . putStrLn $ "min "
 
   status <- optimizeLP
   liftIO . putStrLn $ "the solution was found to be " <> show status

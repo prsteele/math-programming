@@ -12,37 +12,37 @@ import Math.Programming.LinExpr
 import Math.Programming.Types
 
 -- | Create an objective to be minimized.
-minimize :: LPMonad v c o m => Expr v -> m o
+minimize :: MonadLP v c o m => Expr v -> m o
 minimize objectiveExpr = do
   objective <- addObjective objectiveExpr
   setSense objective Minimization
   pure objective
 
 -- | Create an objective to be maximized.
-maximize :: LPMonad v c o m => Expr v -> m o
+maximize :: MonadLP v c o m => Expr v -> m o
 maximize objectiveExpr = do
   objective <- addObjective objectiveExpr
   setSense objective Maximization
   pure objective
 
 -- | Get the value of a linear expression in the current solution.
-evalExpr :: LPMonad v c o m => Expr v -> m Double
+evalExpr :: MonadLP v c o m => Expr v -> m Double
 evalExpr expr = traverse getVariableValue expr <&> eval
 
 -- | Create a new free variable.
-free :: LPMonad v c o m => m v
+free :: MonadLP v c o m => m v
 free = addVariable `within` Free
 
 -- | Create a new non-negative variable.
-nonNeg :: LPMonad v c o m => m v
+nonNeg :: MonadLP v c o m => m v
 nonNeg = addVariable `within` NonNegativeReals
 
 -- | Create a new non-positive variable.
-nonPos :: LPMonad v c o m => m v
+nonPos :: MonadLP v c o m => m v
 nonPos = addVariable `within` NonPositiveReals
 
 -- | Create a new variable bounded between two values.
-bounded :: LPMonad v c o m => Double -> Double -> m v
+bounded :: MonadLP v c o m => Double -> Double -> m v
 bounded lo hi = within addVariable (Interval lo hi)
 
 -- | Constrain a variable to take on certain values.
@@ -52,26 +52,26 @@ bounded lo hi = within addVariable (Interval lo hi)
 -- @
 -- 'create' \``within`\` 'NonNegativeReals'
 -- @
-within :: LPMonad v c o m => m v -> Bounds -> m v
+within :: MonadLP v c o m => m v -> Bounds -> m v
 within makeVar bounds = do
   variable <- makeVar
   setBounds variable bounds
   pure variable
 
 -- | Create an integer-valued variable.
-integer :: IPMonad v c o m => m v
+integer :: MonadIP v c o m => m v
 integer = addVariable `asKind` Integer `within` Free
 
 -- | Create a binary variable.
-binary :: IPMonad v c o m => m v
+binary :: MonadIP v c o m => m v
 binary = addVariable `asKind` Binary
 
 -- | Create an integer-value variable that takes on non-negative values.
-nonNegInteger :: IPMonad v c o m => m v
+nonNegInteger :: MonadIP v c o m => m v
 nonNegInteger = addVariable `asKind` Integer `within` NonNegativeReals
 
 -- | Create an integer-value variable that takes on non-positive values.
-nonPosInteger :: IPMonad v c o m => m v
+nonPosInteger :: MonadIP v c o m => m v
 nonPosInteger = addVariable `asKind` Integer `within` NonPositiveReals
 
 -- | Set the type of a variable.
@@ -81,7 +81,7 @@ nonPosInteger = addVariable `asKind` Integer `within` NonPositiveReals
 -- @
 -- 'create' \``asKind`\` 'Binary'
 -- @
-asKind :: IPMonad v c o m => m v -> Domain -> m v
+asKind :: MonadIP v c o m => m v -> Domain -> m v
 asKind make dom = do
   variable <- make
   setDomain variable dom
@@ -100,30 +100,30 @@ named make n = do
   setName x n
   pure x
 
-(#<=@) :: LPMonad v c o m => Double -> v -> m c
-(#<=.) :: LPMonad v c o m => Double -> Expr v -> m c
-(@<=#) :: LPMonad v c o m => v -> Double -> m c
-(@<=@) :: LPMonad v c o m => v -> v -> m c
-(@<=.) :: LPMonad v c o m => v -> Expr v -> m c
-(.<=#) :: LPMonad v c o m => Expr v -> Double -> m c
-(.<=@) :: LPMonad v c o m => Expr v -> v -> m c
-(.<=.) :: LPMonad v c o m => Expr v -> Expr v -> m c
-(#>=@) :: LPMonad v c o m => Double -> v -> m c
-(#>=.) :: LPMonad v c o m => Double -> Expr v -> m c
-(@>=#) :: LPMonad v c o m => v -> Double -> m c
-(@>=@) :: LPMonad v c o m => v -> v -> m c
-(@>=.) :: LPMonad v c o m => v -> Expr v -> m c
-(.>=#) :: LPMonad v c o m => Expr v -> Double -> m c
-(.>=@) :: LPMonad v c o m => Expr v -> v -> m c
-(.>=.) :: LPMonad v c o m => Expr v -> Expr v -> m c
-(#==@) :: LPMonad v c o m => Double -> v -> m c
-(#==.) :: LPMonad v c o m => Double -> Expr v -> m c
-(@==#) :: LPMonad v c o m => v -> Double -> m c
-(@==@) :: LPMonad v c o m => v -> v -> m c
-(@==.) :: LPMonad v c o m => v -> Expr v -> m c
-(.==#) :: LPMonad v c o m => Expr v -> Double -> m c
-(.==@) :: LPMonad v c o m => Expr v -> v -> m c
-(.==.) :: LPMonad v c o m => Expr v -> Expr v -> m c
+(#<=@) :: MonadLP v c o m => Double -> v -> m c
+(#<=.) :: MonadLP v c o m => Double -> Expr v -> m c
+(@<=#) :: MonadLP v c o m => v -> Double -> m c
+(@<=@) :: MonadLP v c o m => v -> v -> m c
+(@<=.) :: MonadLP v c o m => v -> Expr v -> m c
+(.<=#) :: MonadLP v c o m => Expr v -> Double -> m c
+(.<=@) :: MonadLP v c o m => Expr v -> v -> m c
+(.<=.) :: MonadLP v c o m => Expr v -> Expr v -> m c
+(#>=@) :: MonadLP v c o m => Double -> v -> m c
+(#>=.) :: MonadLP v c o m => Double -> Expr v -> m c
+(@>=#) :: MonadLP v c o m => v -> Double -> m c
+(@>=@) :: MonadLP v c o m => v -> v -> m c
+(@>=.) :: MonadLP v c o m => v -> Expr v -> m c
+(.>=#) :: MonadLP v c o m => Expr v -> Double -> m c
+(.>=@) :: MonadLP v c o m => Expr v -> v -> m c
+(.>=.) :: MonadLP v c o m => Expr v -> Expr v -> m c
+(#==@) :: MonadLP v c o m => Double -> v -> m c
+(#==.) :: MonadLP v c o m => Double -> Expr v -> m c
+(@==#) :: MonadLP v c o m => v -> Double -> m c
+(@==@) :: MonadLP v c o m => v -> v -> m c
+(@==.) :: MonadLP v c o m => v -> Expr v -> m c
+(.==#) :: MonadLP v c o m => Expr v -> Double -> m c
+(.==@) :: MonadLP v c o m => Expr v -> v -> m c
+(.==.) :: MonadLP v c o m => Expr v -> Expr v -> m c
 x #<=@ y = addConstraint $ Inequality LT (con x) (var y)
 
 x #<=. y = addConstraint $ Inequality LT (con x) y

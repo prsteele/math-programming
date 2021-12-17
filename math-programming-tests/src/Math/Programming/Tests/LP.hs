@@ -12,7 +12,7 @@ import Test.Hspec
 import Text.Printf
 
 makeLPTests ::
-  (MonadIO m, LPMonad v c o m) =>
+  (MonadIO m, MonadLP v c o m) =>
   -- | The runner for the API being tested.
   (m () -> IO ()) ->
   -- | The resulting test suite.
@@ -37,7 +37,7 @@ data Nutrient = Calories | VitaminA
       Show
     )
 
-dietProblemTest :: (MonadIO m, LPMonad v c o m) => m ()
+dietProblemTest :: (MonadIO m, MonadLP v c o m) => m ()
 dietProblemTest =
   let cost :: Food -> Double
       cost Corn = 0.18

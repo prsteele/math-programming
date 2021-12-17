@@ -10,7 +10,7 @@ import Math.Programming
 import Test.Hspec
 
 makeApiTests ::
-  (MonadIO m, LPMonad v c o m) =>
+  (MonadIO m, MonadLP v c o m) =>
   -- | The runner for the API being tested.
   (m () -> IO ()) ->
   -- | The resulting test suite.
@@ -21,7 +21,7 @@ makeApiTests runner =
     it "sets and gets constraint names" (runner setGetConstraintName)
 
 -- | We should be able to set and retrieve variable names
-setGetVariableName :: (MonadIO m, LPMonad v c o m) => m ()
+setGetVariableName :: (MonadIO m, MonadLP v c o m) => m ()
 setGetVariableName = do
   let name = "foo"
   x <- free `named` name
@@ -29,7 +29,7 @@ setGetVariableName = do
   liftIO $ vName `shouldBe` name
 
 -- | We should be able to set and retrieve constraint names
-setGetConstraintName :: (MonadIO m, LPMonad v c o m) => m ()
+setGetConstraintName :: (MonadIO m, MonadLP v c o m) => m ()
 setGetConstraintName = do
   let name = "foo"
   x <- free

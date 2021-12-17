@@ -24,8 +24,8 @@ newtype AppM a = AppM {unAppM :: StateT (M.Map Var GlpkVariable) Glpk a}
       Named GlpkVariable,
       Named GlpkConstraint,
       Named GlpkObjective,
-      LPMonad GlpkVariable GlpkConstraint GlpkObjective,
-      IPMonad GlpkVariable GlpkConstraint GlpkObjective
+      MonadLP GlpkVariable GlpkConstraint GlpkObjective,
+      MonadIP GlpkVariable GlpkConstraint GlpkObjective
     )
 
 runAppM :: AppM a -> IO a
@@ -68,7 +68,7 @@ solve problem = do
       pure ()
 
 program ::
-  (MonadIO m, IPMonad v c o m, MonadState (M.Map Var v) m) =>
+  (MonadIO m, MonadIP v c o m, MonadState (M.Map Var v) m) =>
   Problem ->
   m (Maybe (M.Map Var Double))
 program clauses = do
@@ -86,7 +86,7 @@ program clauses = do
       forM_ vars (getName >=> (liftIO . print))
       fmap pure (mapM getVariableValue vars)
 
-termExpr :: (IPMonad v c o m, MonadState (M.Map Var v) m) => Term -> m (Expr v)
+termExpr :: (MonadIP v c o m, MonadState (M.Map Var v) m) => Term -> m (Expr v)
 termExpr (v, b) = do
   x <- getVar v
   pure $
@@ -94,7 +94,7 @@ termExpr (v, b) = do
       then 1 .* x
       else (-1) .* x
 
-getVar :: (IPMonad v c o m, MonadState (M.Map Var v) m) => Var -> m v
+getVar :: (MonadIP v c o m, MonadState (M.Map Var v) m) => Var -> m v
 getVar v = do
   vars <- get
   case M.lookup v vars of

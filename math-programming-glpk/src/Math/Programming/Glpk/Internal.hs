@@ -114,7 +114,7 @@ newtype GlpkT m a = GlpkT {_runGlpk :: ReaderT GlpkEnv m a}
 
 type Glpk = GlpkT IO
 
-instance LPMonad GlpkVariable GlpkConstraint GlpkObjective Glpk where
+instance MonadLP GlpkVariable GlpkConstraint GlpkObjective Glpk where
   addVariable = addVariable'
   deleteVariable = deleteVariable'
   getVariableValue = getVariableValue'
@@ -146,7 +146,7 @@ instance Named GlpkObjective Glpk where
   getName = getObjectiveName'
   setName = setObjectiveName'
 
-instance IPMonad GlpkVariable GlpkConstraint GlpkObjective Glpk where
+instance MonadIP GlpkVariable GlpkConstraint GlpkObjective Glpk where
   getDomain = getVariableDomain'
   setDomain = setVariableDomain'
   getRelativeMIPGap = getRelativeMIPGap'

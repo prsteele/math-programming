@@ -7,7 +7,7 @@ import Math.Programming
 import Test.Hspec
 
 makeIPTests ::
-  (MonadIO m, IPMonad v c o m) =>
+  (MonadIO m, MonadIP v c o m) =>
   -- | The runner for the API being tested.
   (m () -> IO ()) ->
   -- | The resulting test suite.
@@ -28,7 +28,7 @@ makeIPTests runner =
 -- @
 --
 -- The optimal solution to this MIP is x = 2, y = 1.1.
-simpleMIPTest :: (MonadIO m, IPMonad v c o m) => m ()
+simpleMIPTest :: (MonadIO m, MonadIP v c o m) => m ()
 simpleMIPTest = do
   x <- bounded 0 5 `asKind` Integer
   y <- bounded 0 5 `asKind` Continuous

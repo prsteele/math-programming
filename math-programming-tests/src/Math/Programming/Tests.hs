@@ -11,7 +11,7 @@ import Test.Hspec
 import Text.Printf
 
 makeAllTests ::
-  (MonadIO m, IPMonad v c o m) =>
+  (MonadIO m, MonadIP v c o m) =>
   -- | The name of the API being tested. This will
   -- be used to generate test group names.
   String ->

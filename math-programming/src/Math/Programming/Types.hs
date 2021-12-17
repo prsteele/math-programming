@@ -30,11 +30,12 @@ instance (Monad m, Named a m) => Named a (ReaderT r m) where
 instance (Monad m, Named a m) => Named a (StateT r m) where
   getName = lift . getName
   setName = lift2 setName
+
 -- | A linear program.
 --
 -- This is a monadic context for formulating and solving linear
 -- programs.
-class (Monad m, Named v m, Named c m, Named o m) => LPMonad v c o m | m -> v c o where
+class (Monad m, Named v m, Named c m, Named o m) => MonadLP v c o m | m -> v c o where
   addVariable :: m v
   deleteVariable :: v -> m ()
   getBounds :: v -> m Bounds
@@ -62,7 +63,7 @@ compose2 = fmap fmap fmap
 lift2 :: (MonadTrans t, Monad m) => (a -> b -> m c) -> (a -> b -> t m c)
 lift2 = compose2 lift
 
-instance (LPMonad v c o m) => LPMonad v c o (ReaderT r m) where
+instance (MonadLP v c o m) => MonadLP v c o (ReaderT r m) where
   addVariable = lift addVariable
   deleteVariable = lift . deleteVariable
   getVariableValue = lift . getVariableValue
@@ -82,7 +83,7 @@ instance (LPMonad v c o m) => LPMonad v c o (ReaderT r m) where
   setTimeout = setTimeout
   optimizeLP = optimizeLP
 
-instance LPMonad v c o m => LPMonad v c o (StateT s m) where
+instance MonadLP v c o m => MonadLP v c o (StateT s m) where
   addVariable = lift addVariable
   deleteVariable = lift . deleteVariable
   getVariableValue = lift . getVariableValue
@@ -104,10 +105,10 @@ instance LPMonad v c o m => LPMonad v c o (StateT s m) where
 
 -- | A (mixed) integer program.
 --
--- In addition to the methods of the 'LPMonad' class, this monad
+-- In addition to the methods of the 'MonadLP' class, this monad
 -- supports constraining variables to be either continuous or
 -- discrete.
-class LPMonad v c o m => IPMonad v c o m | m -> v c o where
+class MonadLP v c o m => MonadIP v c o m | m -> v c o where
   getDomain :: v -> m Domain
   setDomain :: v -> Domain -> m ()
 
@@ -116,14 +117,14 @@ class LPMonad v c o m => IPMonad v c o m | m -> v c o where
 
   optimizeIP :: m SolutionStatus
 
-instance IPMonad v c o m => IPMonad v c o (ReaderT r m) where
+instance MonadIP v c o m => MonadIP v c o (ReaderT r m) where
   getDomain = lift . getDomain
   setDomain = lift2 setDomain
   getRelativeMIPGap = lift getRelativeMIPGap
   setRelativeMIPGap = lift . setRelativeMIPGap
   optimizeIP = lift optimizeIP
 
-instance IPMonad v c o m => IPMonad v c o (StateT s m) where
+instance MonadIP v c o m => MonadIP v c o (StateT s m) where
   getDomain = lift . getDomain
   setDomain = lift2 setDomain
   getRelativeMIPGap = lift getRelativeMIPGap

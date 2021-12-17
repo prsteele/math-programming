@@ -8,7 +8,7 @@ module Math.Programming
     -- $mathprograms
 
     -- ** Linear programs
-    LPMonad (..),
+    MonadLP (..),
     Expr,
     Bounds (..),
     SolutionStatus (..),
@@ -16,7 +16,7 @@ module Math.Programming
     Named (..),
 
     -- ** Integer programs
-    IPMonad (..),
+    MonadIP (..),
     Domain (..),
 
     -- * Model-building DSL
@@ -106,22 +106,22 @@ import Math.Programming.Types
 
 -- $mathprograms
 --
--- The 'LPMonad' provides all the primitives necessary to formulate
--- and solve linear programs; the 'IPMonad' provides the same for
+-- The 'MonadLP' provides all the primitives necessary to formulate
+-- and solve linear programs; the 'MonadIP' provides the same for
 -- integer programs. However, you should not often need to use these
 -- APIs directly, as we provide more user-friendly functions wrapping
 -- these low-level functions below.
 
 -- $models
 --
--- The functions in the 'LPMonad' and 'IPMonad' typeclasses are
+-- The functions in the 'MonadLP' and 'MonadIP' typeclasses are
 -- designed to interface with low-level solver backends. We provide a
 -- cleaner interface in the following sections.
 
 -- $variables
 --
--- 'LPMonad' provides 'addVariable' and 'setVariableBounds', and
--- 'IPMonad' additionally provides 'setVariableDomain'. While
+-- 'MonadLP' provides 'addVariable' and 'setVariableBounds', and
+-- 'MonadIP' additionally provides 'setVariableDomain'. While
 -- sufficient to create your programs, you are encouraged to use the
 -- more natural functions below.
 
@@ -196,7 +196,7 @@ import Math.Programming.Types
 
 -- $constraints
 --
--- The 'LPMonad' provides the 'addConstraint' function. However, you
+-- The 'MonadLP' provides the 'addConstraint' function. However, you
 -- will typically use the operators below to directly apply
 -- constraints to the model. We follow the same conventions as with
 -- our arithmetic operators.

@@ -1,6 +1,6 @@
 cabal-version:       2.4
 name:                math-programming-glpk
-version:             0.6.0
+version:             0.5.0
 synopsis:            A GLPK backend to the math-programming library.
 description:         Please see the README on GitHub at <https://github.com/prsteele/math-programming/blob/main/math-programming-glpk/README.md>
 bug-reports:         https://github.com/prsteele/math-programming/issues
@@ -23,9 +23,9 @@ library
   exposed-modules:   Math.Programming.Glpk
   other-modules:     Math.Programming.Glpk.Internal
   ghc-options:       -Wall
-  build-depends:     base             ^>=4.17
-                   , glpk-headers     ^>=0.6
-                   , math-programming ^>=0.6
+  build-depends:     base             ^>=4.15.0.1
+                   , glpk-headers     ^>=0.5
+                   , math-programming ^>=0.5
                    , mtl              ^>=2.3
                    , text             ^>=2.0
                    -- https://hub.darcs.net/ross/transformers/issue/90
@@ -40,8 +40,8 @@ test-suite math-programming-glpk-test-suite
   hs-source-dirs:    test
   ghc-options:       -threaded -with-rtsopts=-N -Wall
   build-depends:     math-programming-glpk
-                   , base                   ^>=4.17
-                   , math-programming       ^>=0.6
-                   , math-programming-tests ^>=0.6
+                   , base                   ^>=4.15.0.1
+                   , math-programming       ^>=0.5
+                   , math-programming-tests ^>=0.5
                    , unliftio               ^>=0.2
                    , hspec                  ^>=2.8

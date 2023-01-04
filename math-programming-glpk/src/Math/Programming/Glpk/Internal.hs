@@ -11,7 +11,7 @@
 module Math.Programming.Glpk.Internal where
 
 import Control.Monad
-import Control.Monad.Except
+import Control.Monad.Trans
 import Control.Monad.Trans.Reader
 import Data.Functor
 import qualified Data.Text as T

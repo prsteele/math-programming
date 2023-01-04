@@ -1,11 +1,10 @@
 { sources ? import ./nix/sources.nix
 , pkgs ? import sources.nixpkgs { }
-, compiler ? "ghc902"
 }:
 let
-  local = import ./default.nix { inherit sources pkgs compiler; };
+  local = import ./default.nix { inherit sources pkgs; };
 in
-pkgs.haskell.packages.${compiler}.shellFor {
+pkgs.haskellPackages.shellFor {
   packages = p: [ local.glpk-headers
                   local.math-programming
                   local.math-programming-glpk

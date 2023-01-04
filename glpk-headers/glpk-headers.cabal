@@ -30,8 +30,10 @@ test-suite glpk-headers-haskell-test-suite
   type:              exitcode-stdio-1.0
   main-is:           Spec.hs
   hs-source-dirs:    test
-  extra-libraries:   glpk
+  ghc-options:       -threaded -with-rtsopts=-N
   other-modules:     Math.Programming.Glpk.HeadersSpec
-  build-depends:     glpk-headers
-                   , base  ^>=4.14.1.0
-                   , hspec ^>=2.7.10
+  build-depends:     base
+                   , glpk-headers
+                   , tasty
+                   , tasty-discover
+                   , tasty-hunit

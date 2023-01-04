@@ -810,7 +810,6 @@ newtype GlpkVariableType
   = GlpkVariableType { fromGlpkVariableType :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -934,7 +933,6 @@ newtype GlpkMessageLevel
   = GlpkMessageLevel { fromGlpkMessageLevel :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -956,7 +954,6 @@ newtype GlpkSimplexMethod
   = GlpkSimplexMethod { fromGlpkSimplexMethod :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -976,7 +973,6 @@ newtype GlpkPricing
   = GlpkPricing { fromGlpkPricing :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -996,7 +992,6 @@ newtype GlpkRatioTest
   = GlpkRatioTest { fromGlpkRatioTest :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -1015,7 +1010,6 @@ newtype GlpkPreCholeskyOrdering
   = GlpkPreCholeskyOrdering { fromGlpkPreCholeskyOrdering :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -1036,7 +1030,6 @@ newtype GlpkBranchingTechnique
   = GlpkBranchingTechnique { fromGlpkBranchingTechnique :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -1058,7 +1051,6 @@ newtype GlpkBacktrackingTechnique
   = GlpkBacktrackingTechnique { fromGlpkBacktrackingTechnique :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -1079,7 +1071,6 @@ newtype GlpkPreProcessingTechnique
   = GlpkPreProcessingTechnique { fromGlpkPreProcessingTechnique :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -1099,7 +1090,6 @@ newtype GlpkFeasibilityPump
   = GlpkFeasibilityPump { fromGlpkFeasibilityPump :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -1118,7 +1108,6 @@ newtype GlpkProximitySearch
   = GlpkProximitySearch { fromGlpkProximitySearch :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -1137,7 +1126,6 @@ newtype GlpkGomoryCuts
   = GlpkGomoryCuts { fromGlpkGomoryCuts :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -1156,7 +1144,6 @@ newtype GlpkMIRCuts
   = GlpkMIRCuts { fromGlpkMIRCuts :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -1175,7 +1162,6 @@ newtype GlpkCoverCuts
   = GlpkCoverCuts { fromGlpkCoverCuts :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -1194,7 +1180,6 @@ newtype GlpkCliqueCuts
   = GlpkCliqueCuts { fromGlpkCliqueCuts :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -1213,7 +1198,6 @@ newtype GlpkPresolve
   = GlpkPresolve { fromGlpkPresolve :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -1232,7 +1216,6 @@ newtype GlpkBinarization
   = GlpkBinarization { fromGlpkBinarization :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -1251,7 +1234,6 @@ newtype GlpkSimpleRounding
   = GlpkSimpleRounding { fromGlpkSimpleRounding :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -1270,7 +1252,7 @@ newtype GlpkConstraintOrigin
   = GlpkConstraintOrigin { fromGlpkConstraintOrigin :: CInt }
   deriving
     ( Eq
-    , GStorable
+    , Generic
     , Ord
     , Read
     , Show
@@ -1290,7 +1272,6 @@ newtype GlpkCutType
   = GlpkCutType { fromGlpkCutType :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -1311,7 +1292,6 @@ newtype GlpkControl
   = GlpkControl { fromGlpkControl :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show
@@ -1505,7 +1485,6 @@ newtype GlpkFactorizationType
   = GlpkFactorizationType { fromGlpkFactorizationType :: CInt }
   deriving
     ( Eq
-    , GStorable
     , Ord
     , Read
     , Show

@@ -1,6 +1,6 @@
 { sources ? import ./nix/sources.nix
 , pkgs ? import sources.nixpkgs { }
-, compiler ? "ghc8104"
+, compiler ? "ghc902"
 }:
 let
   overrides = self: super: {

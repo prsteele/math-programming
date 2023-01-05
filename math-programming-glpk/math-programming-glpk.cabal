@@ -23,13 +23,12 @@ library
   exposed-modules:   Math.Programming.Glpk
   other-modules:     Math.Programming.Glpk.Internal
   ghc-options:       -Wall
-  -- Restrictions on transformers due to https://hub.darcs.net/ross/transformers/issue/90
-  build-depends:     base             ^>=4.15.0.1
+  build-depends:     base             <5
                    , glpk-headers     ^>=0.5
                    , math-programming ^>=0.5
-                   , mtl              ^>=2.3
-                   , text             ^>=2.0
-                   , transformers     >=0.5.6 && <0.6
+                   , mtl              ^>=2.2
+                   , text             ^>=1.2
+                   , transformers     ^>=0.5
                    , unliftio         ^>=0.2
 
 test-suite math-programming-glpk-test-suite
@@ -40,7 +39,7 @@ test-suite math-programming-glpk-test-suite
   hs-source-dirs:    test
   ghc-options:       -threaded -with-rtsopts=-N -Wall
   build-depends:     math-programming-glpk
-                   , base                   ^>=4.15.0.1
+                   , base                   <5
                    , math-programming       ^>=0.5
                    , math-programming-tests ^>=0.5
                    , unliftio               ^>=0.2

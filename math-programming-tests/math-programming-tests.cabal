@@ -26,8 +26,8 @@ library
                    , Math.Programming.Tests.IP
   other-modules:
   ghc-options:       -Wall
-  build-depends:     base             ^>=4.15.0.1
+  build-depends:     base             <5
                    , math-programming ^>=0.5
                    , hspec            ^>=2.8
                    , QuickCheck       ^>=2.14
-                   , text             ^>=2.0
+                   , text             ^>=1.2

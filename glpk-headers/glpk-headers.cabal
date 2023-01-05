@@ -22,7 +22,7 @@ library
   hs-source-dirs:    src
   exposed-modules:   Math.Programming.Glpk.Header
   extra-libraries:   glpk
-  build-depends:     base            ^>=4.15.0.1
+  build-depends:     base            <5
                    , derive-storable ^>=0.3
 
 test-suite glpk-headers-haskell-test-suite
@@ -32,6 +32,6 @@ test-suite glpk-headers-haskell-test-suite
   hs-source-dirs:    test
   ghc-options:       -threaded -with-rtsopts=-N
   other-modules:     Math.Programming.Glpk.HeadersSpec
-  build-depends:     base         ^>=4.15.0.1
-                   , glpk-headers
-                   , hspec        ^>=2.8
+  build-depends:     glpk-headers
+                   , base  <5
+                   , hspec ^>=2.8

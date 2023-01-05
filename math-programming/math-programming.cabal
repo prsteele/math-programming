@@ -8,7 +8,7 @@ license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Patrick Steele
 maintainer:          steele.pat@gmail.com
-copyright:           2018-2021, Patrick Steele
+copyright:           2018-2023, Patrick Steele
 category:            Math
 build-type:          Simple
 extra-source-files:  README.md, ChangeLog.md
@@ -27,11 +27,12 @@ library
   other-modules:
   ghc-options:       -Wall
   -- Restrictions on transformers due to https://hub.darcs.net/ross/transformers/issue/90
-  build-depends:     base         ^>=4.15.0.1
+  build-depends:     base         <5
                    , containers   ^>=0.6
-                   , text         ^>=2.0
-                   , transformers >=0.5.6 && <0.6
-                   , mtl          ^>=2.3
+                   , exceptions   ^>=0.10
+                   , mtl          ^>=2.2
+                   , text         ^>=1.2
+                   , transformers ^>=0.5
 
 test-suite math-programming-test-suite
   default-language:  Haskell2010
@@ -42,8 +43,8 @@ test-suite math-programming-test-suite
   other-modules:     Math.Programming.LinExprSpec
                    , Math.Programming.DslSpec
   build-depends:     math-programming
-                   , base       ^>=4.15.0.1
-                   , QuickCheck ^>=2.14
+                   , base       <5
                    , hspec      ^>=2.8
-                   , mtl        ^>=2.3
-                   , text       ^>=2.0
+                   , mtl        ^>=2.2
+                   , QuickCheck ^>=2.14
+                   , text       ^>=1.2

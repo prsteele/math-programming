@@ -5,7 +5,8 @@ let
   local = import ./default.nix { inherit sources pkgs; };
 in
 pkgs.haskellPackages.shellFor {
-  packages = p: [ local.glpk-headers
+  packages = p: [ local.examples
+                  local.glpk-headers
                   local.math-programming
                   local.math-programming-glpk
                   local.math-programming-tests

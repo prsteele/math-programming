@@ -8,8 +8,6 @@ let
     math-programming       = self.callCabal2nix "math-programming"       ./math-programming       {};
     math-programming-glpk  = self.callCabal2nix "math-programming-glpk"  ./math-programming-glpk  {};
     math-programming-tests = self.callCabal2nix "math-programming-tests" ./math-programming-tests {};
-    text = pkgs.haskellPackages.text_2_0_1;
-    mtl = pkgs.haskellPackages.mtl_2_3_1;
   };
   hPkgs = pkgs.haskellPackages.override { inherit overrides; };
 in

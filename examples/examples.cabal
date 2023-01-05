@@ -17,20 +17,6 @@ source-repository head
   type:     git
   location: https://github.com/prsteele/math-programming
 
--- executable 3sat
---   main-is:            Example3SAT.lhs
---   hs-source-dirs:     app
---   default-language:   Haskell2010
---   ghc-options:        -pgmL markdown-unlit -threaded
---   build-depends:      base                  ^>=4.14.1.0
---                     , containers ^>=0.6.2.1
---                     , math-programming      ^>=0.6
---                     , math-programming-glpk ^>=0.6
---                     , markdown-unlit
---                     , mtl        ^>=2.2.2
---                     , text                  ^>=1.2.4.1
---   build-tool-depends: markdown-unlit:markdown-unlit
-
 executable 3sat
   main-is:            Ex.hs
   hs-source-dirs:     app
@@ -40,8 +26,8 @@ executable 3sat
                     , containers            ^>=0.6
                     , math-programming      ^>=0.5
                     , math-programming-glpk ^>=0.5
-                    , mtl                   ^>=2.3
-                    , text                  ^>=2.0
+                    , mtl                   ^>=2.2
+                    , text                  ^>=1.2
 
 executable tutorial
   main-is:            Tutorial.hs
@@ -52,5 +38,5 @@ executable tutorial
                     , containers            ^>=0.6
                     , math-programming      ^>=0.5
                     , math-programming-glpk ^>=0.5
-                    , mtl                   ^>=2.3
-                    , text                  ^>=2.0
+                    , mtl                   ^>=2.2
+                    , text                  ^>=1.2

@@ -14,6 +14,7 @@ math programming problems.
   functions for defining tests for new solver backends.
 - [`glpk-headers`](./glpk-headers/), low-level bindings the
   [GLPK](https://www.gnu.org/software/glpk/) solver.
+- [`examples`](./examples/), a collection of example code.
 
 ## Development
 

@@ -1,0 +1,40 @@
+name: "Publish"
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "The package to publish"
+        required: true
+        type: choice
+        options:
+          - glpk-headers
+          - math-programming
+          - math-programming-glpk
+          - math-programming-tests
+      publish:
+        description: "Whether to publish a package (true) or a package candidate (false)"
+        type: bool
+        default: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: cachix/install-nix-action@v18
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
+    - run: |
+        s/cabal v2-sdist "$TARGET"
+
+        mkdir docs-dir
+        s/cabal v2-haddock "$TARGET" --builddir=docs-dir --haddock-for-hackage --enable-doc
+      env:
+        TARGET: ${{ inputs.target }}
+    - uses: haskell-actions/hackage-publish@v1.1
+      with:
+        hackageToken: ${{ secrets.HACKAGE_API_KEY }}
+        packagesPath: dist-newstyle/sdist
+        docsPath: docs-dir
+        publish: ${{ inputs.publish }}

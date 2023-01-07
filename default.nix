@@ -1,15 +1,22 @@
-# You can install extra packages in the shell environment by
-# specifying additional arguments to extraDeps
-{
-  sources ? import ./nix/sources.nix
+{ sources ? import ./nix/sources.nix
 , pkgs ? import sources.nixpkgs { }
-, compiler ? "ghc884"
-, extraDeps ? []
 }:
 let
-  mkDerivation =
-    args@{ librarySystemDepends ? [], ... }:
-    pkgs.haskell.packages.${compiler}.mkDerivation
-      ( args // { librarySystemDepends = librarySystemDepends ++ extraDeps; });
+  overrides = self: super: {
+    examples               = self.callCabal2nix "examples"               ./examples               {};
+    glpk-headers           = self.callCabal2nix "glpk-headers"           ./glpk-headers           {};
+    math-programming       = self.callCabal2nix "math-programming"       ./math-programming       {};
+    math-programming-glpk  = self.callCabal2nix "math-programming-glpk"  ./math-programming-glpk  {};
+    math-programming-tests = self.callCabal2nix "math-programming-tests" ./math-programming-tests {};
+  };
+  hPkgs = pkgs.haskellPackages.override { inherit overrides; };
 in
-pkgs.haskell.packages.${compiler}.callPackage ./math-programming.nix { inherit mkDerivation; }
+with hPkgs;
+{ inherit
+  examples
+  glpk-headers
+  math-programming
+  math-programming-glpk
+  math-programming-tests
+  ;
+}

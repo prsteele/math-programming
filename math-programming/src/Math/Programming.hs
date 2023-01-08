@@ -64,6 +64,7 @@ module Math.Programming
     con,
     vsum,
     esum,
+    scale,
 
     -- ** Naming model components
     -- $naming

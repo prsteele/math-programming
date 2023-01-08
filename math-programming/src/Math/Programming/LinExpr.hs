@@ -1,6 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DeriveFoldable #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE TupleSections #-}
 
@@ -54,7 +51,7 @@ infixl 6 .+
 
 -- | The difference of linear expressions.
 (.-) :: Num a => LinExpr a b -> LinExpr a b -> LinExpr a b
-(.-) x y = x .+ (scale (-1) y)
+(.-) x y = x .+ scale (-1) y
 
 infixl 6 .-
 

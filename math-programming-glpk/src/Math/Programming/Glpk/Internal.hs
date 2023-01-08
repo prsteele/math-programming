@@ -390,9 +390,9 @@ addObjective' expr =
 
 -- | Delete an objective
 --
--- There is nothing to acdtually delete, so we just set a zero objective
+-- There is nothing to actually delete, so we just set a zero objective
 deleteObjective' :: GlpkObjective -> Glpk ()
-deleteObjective' _ = addObjective' mempty >> pure ()
+deleteObjective' _ = void (addObjective' mempty)
 
 getObjectiveName' :: GlpkObjective -> Glpk T.Text
 getObjectiveName' _ = do

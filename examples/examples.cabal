@@ -8,7 +8,7 @@ license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Patrick Steele
 maintainer:          steele.pat@gmail.com
-copyright:           2021, Patrick Steele
+copyright:           2021--2023, Patrick Steele
 category:            Math
 build-type:          Simple
 extra-source-files:  README.md, ChangeLog.md
@@ -18,16 +18,18 @@ source-repository head
   location: https://github.com/prsteele/math-programming
 
 executable 3sat
-  main-is:            Ex.hs
+  main-is:            Example3SAT.lhs
   hs-source-dirs:     app
   default-language:   Haskell2010
-  ghc-options:        -threaded
+  ghc-options:        -threaded -pgmL markdown-unlit
   build-depends:      base                  ^>=4.15.0.1
                     , containers            ^>=0.6
+                    , markdown-unlit        ^>=0.5
                     , math-programming      ^>=0.5
                     , math-programming-glpk ^>=0.5
                     , mtl                   ^>=2.2
                     , text                  ^>=1.2
+
 
 executable tutorial
   main-is:            Tutorial.hs

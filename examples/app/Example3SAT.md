@@ -17,7 +17,7 @@ _terms_. A _term_ consists of a _variable_ and a _sign_. In the 3SAT
 instance
 
 $$
-    (x \lor y \lor \lnot z) \land (\lor x \lor y \lor z)
+    (x \lor y \lor \lnot z) \land (x \lor y \lor z)
 $$
 
 there are two clauses, $x \lor y \lor \lnot z$ and $\lor x \lor y \lor
@@ -43,11 +43,13 @@ $$
 $$
 
 where $v(i, j)$ maps to some variable, $s(i, j) = 1$ indicates that
-variable $v(i, j)$ is a positive literal in the term, and $s(i, j) =
--1$ indicates that variable $v(i, j)$ is a negative literal in the
-term. Let $w(i, j)$ denote the binary MIP variable associated with the
-3SAT variable $v(i, j)$ To model this instance, we introduce one
-binary variable for each 3SAT variable. For each clause $i$, we
+variable $v(i, j)$ is a positive literal in the term, and $s(i, j) = -1$
+indicates that variable $v(i, j)$ is a negative literal in the
+term.
+
+To model this instance, we introduce one binary variable for
+each 3SAT variable; let $w(i, j)$ denote the binary variable
+associated with the 3SAT variable $v(i, j)$ For each clause $i$, we
 introduce the constraint
 
 $$
@@ -65,7 +67,8 @@ $$
 
 We have a zero objective function. If the mixed-integer program is
 infeasible, we claim the 3SAT instance is unsatisfiable. Otherwise,
-for a feasible solution $\hat y{i, j}$
+for a feasible solution we assign $v(i, j)$ to true when $w(i, j) = 1$
+and $v(i, j)$ to false otherwise.
 
 ## Preamble
 
@@ -96,7 +99,7 @@ import Math.Programming
 import Math.Programming.Glpk
 ```
 
-# Describing a 3SAT instance
+# Describing a 3SAT instance in Haskell
 
 First, we should model a 3SAT instance abstractly in Haskell. We have
 variables,
@@ -132,18 +135,18 @@ type Problem = [Clause]
 The 3SAT instance
 
 $$
-    (x \lor y \lor \lnot z) \land (\lor x \lor y \lor z)
+    (x \lor y \lor \lnot z) \land (x \lor y \lor z)
 $$
 
 would be represented with these types as
 
 ```haskell<!-- Example -->
 >>> [ (Positive (Var "x"), Positive (Var "y"), Negative (Var "z"))
-    , (Negative (Var "x"), Positive (Var "y"), Negative (Var "z"))
+    , (Positve (Var "x"), Positive (Var "y"), Positive (Var "z"))
     ]
 ```
 
-# Parsing problem input
+# Parsing the problem input
 
 We need to be able to parse some textual representation of a 3SAT
 instance. We'll use a format where each line is a clause, each clause
@@ -152,14 +155,14 @@ with an optional leading "-" indicating logical negation. In this
 format, we would represent
 
 $$
-    (x \lor y \lor \lnot z) \land (\lor x \lor y \lor z)
+    (x \lor y \lor \lnot z) \land (x \lor y \lor z)
 $$
 
 as
 
 ```
 x y -z
--x y z
+x y z
 ```
 
 This format is simple enough that we can get by without using
@@ -172,7 +175,7 @@ parseProblem input = mapM parseClause (T.lines input)
     parseClause :: T.Text -> Either T.Text (Term, Term, Term)
     parseClause clause = case T.words clause of
       [x, y, z] -> (,,) <$> term x <*> term y <*> term z
-      _ -> Left clause
+      _ -> Left ("failed to parse " <> clause)
 
     term :: T.Text -> Either T.Text Term
     term var = case T.stripPrefix "-" var of
@@ -182,33 +185,11 @@ parseProblem input = mapM parseClause (T.lines input)
 
 # Creating the mixed-integer program
 
-Once we've parsed our input to create a number of clauses, we need to
-formulate our mixed-integer program. Our formulation will map each
-3SAT variable to a binary variable. Each clause will map to a
-constraint, and we will have a zero objective function. If we have the
-clause $s_1 x_1 \lor s_2 x_2 \lor s_3 x_3$, where $s_i$ is the sign of
-variable $x_i$, then we introduce the constraint
+We'll need to keep track of the variables we create. We use the state
+monad to do so. Our problem is simple enough to avoid introducing a
+new monad type wrapping the state monad, but we do so anyway for clarity.
 
-$$
-    f(s_1, x_1) + f(s_2, x_2) + f(s_3, x_3) \ge 1
-$$
-
-where
-
-$$
-    f(x, x) = \begin{cases}
-      x, & s \text{is a positive} \\
-      1 - x, & s \text{is negative} \\
-    \end{cases}
-$$
-
-
-
-
-```
--- | Our program state. We track the variables introduced in the State Monad.
---
--- If necessary, we could also track the constraints and objective function.
+```haskell
 newtype AppM a = AppM {unAppM :: StateT (M.Map Var GlpkVariable) Glpk a}
   deriving
     ( Functor,
@@ -216,57 +197,133 @@ newtype AppM a = AppM {unAppM :: StateT (M.Map Var GlpkVariable) Glpk a}
       Monad,
       MonadIO,
       MonadState (M.Map Var GlpkVariable),
-      Named GlpkVariable,
-      Named GlpkConstraint,
-      Named GlpkObjective,
       MonadLP GlpkVariable GlpkConstraint GlpkObjective,
-      MonadIP GlpkVariable GlpkConstraint GlpkObjective
+      MonadIP GlpkVariable GlpkConstraint GlpkObjective,
+      MonadGlpk
     )
 
 runAppM :: AppM a -> IO a
 runAppM = runGlpk . flip evalStateT M.empty . unAppM
+```
 
--- | Get or create the MIP variable associated with a 'Var'.
---
--- If the 'Var' has not yet been added to the problem, we create one.
+Note that our base monad for the `StateT` transformer is `Glpk`, which
+is itself an instance of `MonadIO`. (Internally, `Glpk` is just a
+`ReaderT GlpkEnv IO`.)
+
+We could iterate over all clauses to collect the unique set of
+variables, and then allocate a binary variable for each; instead,
+we'll be lazy, and create new variables as we see them.
+
+```haskell
 getVar :: (MonadIP v c o m, MonadState (M.Map Var v) m) => Var -> m v
 getVar v@(Var name) = do
   vars <- get
   case M.lookup v vars of
+    -- If we already have a variable, return it.
     Just x -> pure x
+    -- We haven't seen this variable; make one and return it.
     Nothing -> do
-      x <- binary `named` name
+      x <- binary
+      setVariableName x name
       put (M.insert v x vars)
       pure x
+```
 
+Note that we've annotated `getVar` in a very general form; we could just as easily have written
+
+```haskell<!-- example -->
+getVar :: Var -> AppM GlpkVariable
+```
+
+We can now define the function $f$ in our formulation as
+
+```haskell
+termExpr :: Term -> AppM (Expr GlpkVariable) --
+termExpr (Positive v) = do
+  x <- getVar v
+  pure (1 *. x)
+termExpr (Negative v) = do
+  x <- getVar v
+  pure (con 1 .- var x)
+```
+
+Note that we need to keep in mind the difference between our abstract
+Haskell variables of type `Var`, the mixed-integer variables of type
+`GlpkVariable`, and _expressions_ of `GlpkVariable`s of type `Expr
+GlpkVariable`. Note that we used two different approaches to
+constructing an `Expr GlpkVariable` from a `GlpkVariable`. The
+function `var` has type
+
+```haskell<!-- example -->
+var :: Num a => b -> LinExpr a b
+```
+
+and simply lifts a variable to an expression containing just that
+variable. Writing `var x` is entirely equivalent to writing `1 *. x`.
+Similarly, we can use `con` to introduce a constant term into a linear
+expression.
+
+We can now make a function that adds a constraint, given a clause.
+
+```haskell
 addClause :: Clause -> AppM ()
 addClause (x, y, z) = do
   vx <- termExpr x
   vy <- termExpr y
   vz <- termExpr z
-  vx .+ vy .+ vz .>=# 1
+  vx .+ vy .+ vz .>= 1
   pure ()
+```
 
-termExpr :: (MonadIP v c o m, MonadState (M.Map Var v) m) => Term -> m (Expr v)
-termExpr (Positive v) = fmap var (getVar v)
-termExpr (Negative v) = fmap (scale (-1)) (termExpr (Positive v))
+Note that `.>=` has type
 
+```haskell<!-- example -->
+(.>=) :: MonadLP v c o m => Expr v -> Double -> m c
+```
+
+and so itself introduces the constraint to the problem! The
+generated constraint is also returned by `.>=`, but unless you are
+interested in e.g. querying the dual value of the constraint, you are
+free to ignore the return value.
+
+We've made variables and constraints, so we can now create the entire program.
+
+```haskell
 program :: Problem -> AppM (Maybe (M.Map Var Double))
 program clauses = do
+  -- Generate all constraints, and as a side effect create all variables
   mapM_ addClause clauses
+
+  -- Solve the problem
   status <- optimizeIP
+
+  writeFormulation "tmp.mip"
+
   case status of
     Error -> liftIO (print "Error") >> pure Nothing
     Infeasible -> pure Nothing
     Unbounded -> pure Nothing
+
+    -- This matches both 'Optimal' and 'Feasible', which are equivalent
+    -- in this formulation
     _ -> do
       vars <- get
-      forM_ vars (getName >=> (liftIO . print))
-      fmap Just (mapM getVariableValue vars)
+      varMap <- mapM getVariableValue vars
+      pure (Just varMap)
+```
 
+When we find a satisfying assignment, we'd like to print it.
+
+```haskell
 printAssignment :: M.Map Var Double -> IO ()
-printAssignment vars = void (flip M.traverseWithKey vars $ \k v -> printf "%s=%f\n" (show k) v)
+printAssignment vars = void (flip M.traverseWithKey vars $ \k v -> printf "%s is %s\n" (show k) (sign_ v))
+  where
+    sign_ v = show (v >= 0.5)
+```
 
+Finally, we'd like to attempt to solve the 3SAT problem provided on stdin.
+
+```haskell
 solve :: Problem -> IO ()
 solve problem = do
   result <- runAppM (program problem)
@@ -284,8 +341,34 @@ main = do
     Right problem -> solve problem
 ```
 
-We want to make a command-line program that will read in a 3SAT
-instance, and either conclude that it is unsatisfiable or output
-a witness to satisfiability. Our input format will have one clause per
-line, with each variable in the clause being
-whitespace-separated. Variables with a leading `-` sign are negated.
+## Examples of use
+
+First, we should verify that the set of empty clauses is satisfiable:
+
+```
+$ ./result/bin/3sat < /dev/null
+Satisfiable
+```
+
+So far, so good. What about our trivial example we've been working with,
+
+$$
+    (x \lor y \lor \lnot z) \land (x \lor y \lor z)
+$$
+
+Note that setting either $x$ or $y$ to true solves both clauses. We find
+
+```
+$ echo -e "x y -z\nx y z" | ./result/bin/3sat
+Satisfiable
+Var "x" is True
+Var "y" is False
+Var "z" is False
+```
+
+as expected. What about an unsatisfiable instance?
+
+```
+$ echo -e "x x x\n-x -x -x" | ./result/bin/3sat
+Unsatisfiable
+```

@@ -8,45 +8,11 @@
 -- interface.
 module Math.Programming.Types where
 
-import Control.Monad.Identity
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.State
 import qualified Data.Text as T
 import Math.Programming.LinExpr
-
--- | The class of things that can be named.
---
--- This is used to name variables, constraints, and objectives in
--- linear programs. See also the 'Math.Programming.named' helper function
-class Named a m where
-  setName :: a -> T.Text -> m ()
-  getName :: a -> m T.Text
-
-instance (Monad m, Named a m) => Named a (ReaderT r m) where
-  getName = lift . getName
-  setName = lift2 setName
-
-instance (Monad m, Named a m) => Named a (StateT r m) where
-  getName = lift . getName
-  setName = lift2 setName
-
--- | This instance is really only used for testing.
---
--- In particular,
---
--- @
--- 'setName' x y >> 'getName' x
--- @
---
--- does not necessarily produce the same result as
---
--- @
--- pure y
--- @
-instance Named T.Text Identity where
-  getName = pure
-  setName _ _ = pure ()
 
 -- | A linear program.
 --
@@ -54,7 +20,7 @@ instance Named T.Text Identity where
 -- programs. The types @v@, @c@, and @o@ refer to the types of
 -- variables, constraints, and objectives, respectively, used by a
 -- particular solver backend.
-class (Monad m, Named v m, Named c m, Named o m) => MonadLP v c o m | m -> v c o where
+class Monad m => MonadLP v c o m | m -> v c o where
   -- | Add a new (free) variable to the model.
   --
   -- See 'Math.Programming.Dsl.free', 'Math.Programming.Dsl.bounded',
@@ -65,13 +31,19 @@ class (Monad m, Named v m, Named c m, Named o m) => MonadLP v c o m | m -> v c o
   -- | Remove a variable from the model.
   deleteVariable :: v -> m ()
 
+  -- | Get the name of a variable.
+  getVariableName :: v -> m T.Text
+
+  -- | Set a name for a variable.
+  setVariableName :: v -> T.Text -> m ()
+
   -- | Retrieve the current bounds associated with a variable.
-  getBounds :: v -> m Bounds
+  getVariableBounds :: v -> m Bounds
 
   -- | Apply bounds to a variable.
   --
   -- See 'Math.Programming.Dsl.within' as a higher-level alternative.
-  setBounds :: v -> Bounds -> m ()
+  setVariableBounds :: v -> Bounds -> m ()
 
   -- | Get the value of a variable in the current solution.
   --
@@ -82,25 +54,55 @@ class (Monad m, Named v m, Named c m, Named o m) => MonadLP v c o m | m -> v c o
   -- | Add a constraint representing the given inequality to the model.
   --
   -- See the 'Math.Programming.Dsl..==.', 'Math.Programming.Dsl..==#',
-  -- 'Math.Programming.Dsl.#==.', 'Math.Programming.Dsl..>=.',
-  -- 'Math.Programming.Dsl..>=#', 'Math.Programming.Dsl.#>=.',
-  -- 'Math.Programming.Dsl..<=.', 'Math.Programming.Dsl..<=#', and
-  -- 'Math.Programming.Dsl.#<=.' functions as higher-level
+  -- 'Math.Programming.Dsl.==.', 'Math.Programming.Dsl..>=.',
+  -- 'Math.Programming.Dsl..>=', 'Math.Programming.Dsl.>=.',
+  -- 'Math.Programming.Dsl..<=.', 'Math.Programming.Dsl..<=', and
+  -- 'Math.Programming.Dsl.<=.' functions as higher-level
   -- alternatives.
   addConstraint :: Inequality (Expr v) -> m c
 
+  -- | Remove a constraint from the model.
   deleteConstraint :: c -> m ()
+
+  -- | Get the name of a constraint.
+  getConstraintName :: c -> m T.Text
+
+  -- | Set a name for a constraint.
+  setConstraintName :: c -> T.Text -> m ()
+
+  -- | Get the dual value associated with a constraint.
   getConstraintValue :: c -> m Double
 
+  -- | Add an objective to the problem.
+  --
+  -- Depending on the solver backend, this might replace an existing objective.
   addObjective :: Expr v -> m o
+
+  -- | Remove an objective from the model.
   deleteObjective :: o -> m ()
-  getSense :: o -> m Sense
-  setSense :: o -> Sense -> m ()
+
+  -- | Get the name of a objective.
+  getObjectiveName :: o -> m T.Text
+
+  -- | Set a name for a objective.
+  setObjectiveName :: o -> T.Text -> m ()
+
+  -- | Get the sense of an objective.
+  getObjectiveSense :: o -> m Sense
+
+  -- | Set the sense of an objective.
+  setObjectiveSense :: o -> Sense -> m ()
+
+  -- | Get the value of an objective.
   getObjectiveValue :: o -> m Double
 
+  -- | Get the timeout associated with a problem.
   getTimeout :: m Double
+
+  -- | Set the timeout associated with a problem.
   setTimeout :: Double -> m ()
 
+  -- | Compute an LP-optimal solution.
   optimizeLP :: m SolutionStatus
 
 -- | Function composition involving a 2-argument function.
@@ -114,42 +116,50 @@ lift2 = compose2 lift
 instance (MonadLP v c o m) => MonadLP v c o (ReaderT r m) where
   addVariable = lift addVariable
   deleteVariable = lift . deleteVariable
+  getVariableName = lift . getVariableName
+  setVariableName = lift2 setVariableName
   getVariableValue = lift . getVariableValue
-  getBounds = lift . getBounds
-  setBounds = lift2 setBounds
+  getVariableBounds = lift . getVariableBounds
+  setVariableBounds = lift2 setVariableBounds
   addConstraint = lift . addConstraint
   deleteConstraint = lift . deleteConstraint
+  getConstraintName = lift . getConstraintName
+  setConstraintName = lift2 setConstraintName
   getConstraintValue = lift . getConstraintValue
-
   addObjective = lift . addObjective
   deleteObjective = lift . deleteObjective
+  getObjectiveName = lift . getObjectiveName
+  setObjectiveName = lift2 setObjectiveName
   getObjectiveValue = lift . getObjectiveValue
-  getSense = lift . getSense
-  setSense = lift2 setSense
-
-  getTimeout = getTimeout
-  setTimeout = setTimeout
-  optimizeLP = optimizeLP
+  getObjectiveSense = lift . getObjectiveSense
+  setObjectiveSense = lift2 setObjectiveSense
+  getTimeout = lift getTimeout
+  setTimeout = lift . setTimeout
+  optimizeLP = lift optimizeLP
 
 instance MonadLP v c o m => MonadLP v c o (StateT s m) where
   addVariable = lift addVariable
   deleteVariable = lift . deleteVariable
   getVariableValue = lift . getVariableValue
-  getBounds = lift . getBounds
-  setBounds = lift2 setBounds
+  getVariableName = lift . getVariableName
+  setVariableName = lift2 setVariableName
+  getVariableBounds = lift . getVariableBounds
+  setVariableBounds = lift2 setVariableBounds
   addConstraint = lift . addConstraint
   deleteConstraint = lift . deleteConstraint
+  getConstraintName = lift . getConstraintName
+  setConstraintName = lift2 setConstraintName
   getConstraintValue = lift . getConstraintValue
-
   addObjective = lift . addObjective
   deleteObjective = lift . deleteObjective
+  getObjectiveName = lift . getObjectiveName
+  setObjectiveName = lift2 setObjectiveName
   getObjectiveValue = lift . getObjectiveValue
-  getSense = lift . getSense
-  setSense = lift2 setSense
-
-  getTimeout = getTimeout
-  setTimeout = setTimeout
-  optimizeLP = optimizeLP
+  getObjectiveSense = lift . getObjectiveSense
+  setObjectiveSense = lift2 setObjectiveSense
+  getTimeout = lift getTimeout
+  setTimeout = lift . setTimeout
+  optimizeLP = lift optimizeLP
 
 -- | A (mixed) integer program.
 --
@@ -157,8 +167,8 @@ instance MonadLP v c o m => MonadLP v c o (StateT s m) where
 -- supports constraining variables to be either continuous or
 -- discrete.
 class MonadLP v c o m => MonadIP v c o m | m -> v c o where
-  getDomain :: v -> m Domain
-  setDomain :: v -> Domain -> m ()
+  getVariableDomain :: v -> m Domain
+  setVariableDomain :: v -> Domain -> m ()
 
   getRelativeMIPGap :: m Double
   setRelativeMIPGap :: Double -> m ()
@@ -166,15 +176,15 @@ class MonadLP v c o m => MonadIP v c o m | m -> v c o where
   optimizeIP :: m SolutionStatus
 
 instance MonadIP v c o m => MonadIP v c o (ReaderT r m) where
-  getDomain = lift . getDomain
-  setDomain = lift2 setDomain
+  getVariableDomain = lift . getVariableDomain
+  setVariableDomain = lift2 setVariableDomain
   getRelativeMIPGap = lift getRelativeMIPGap
   setRelativeMIPGap = lift . setRelativeMIPGap
   optimizeIP = lift optimizeIP
 
 instance MonadIP v c o m => MonadIP v c o (StateT s m) where
-  getDomain = lift . getDomain
-  setDomain = lift2 setDomain
+  getVariableDomain = lift . getVariableDomain
+  setVariableDomain = lift2 setVariableDomain
   getRelativeMIPGap = lift getRelativeMIPGap
   setRelativeMIPGap = lift . setRelativeMIPGap
   optimizeIP = lift optimizeIP

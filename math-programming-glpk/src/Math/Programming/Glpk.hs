@@ -8,6 +8,8 @@ module Math.Programming.Glpk
     GlpkObjective,
     runGlpk,
     writeFormulation,
+    GlpkT,
+    MonadGlpk,
 
     -- ** Controlling GLPK behavior
     -- $settings

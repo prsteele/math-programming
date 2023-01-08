@@ -21,17 +21,24 @@ instance Num a => Semigroup (LinExpr a b) where
 instance Num a => Monoid (LinExpr a b) where
   mempty = con 0
 
--- | Construct a term in a linear expression by multiplying a variable
--- by a constant.
-(.*) :: Num a => a -> b -> LinExpr a b
-(.*) x y = LinExpr [(x, y)] 0
+-- | Construct a term in a linear expression by multiplying a constant
+-- by a variable.
+(*.) :: Num a => a -> b -> LinExpr a b
+(*.) x y = LinExpr [(x, y)] 0
 
 infixl 7 .*
+
+-- | Construct a term in a linear expression by multiplying a variable
+-- by a constant.
+(.*) :: Num a => b -> a -> LinExpr a b
+(.*) = flip (*.)
+
+infixl 7 *.
 
 -- | Construct a term in a linear expression by dividing a variable by
 -- a constant.
 (./) :: Fractional a => b -> a -> LinExpr a b
-(./) x y = (1 / y) .* x
+(./) x y = x .* (1 / y)
 
 infixl 7 ./
 

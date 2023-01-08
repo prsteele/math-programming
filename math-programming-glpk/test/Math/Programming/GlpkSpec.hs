@@ -36,9 +36,9 @@ testFreeVariablesLP = runGlpk $ do
   y <- free
   z <- free
 
-  _ <- var x .==# 0
-  _ <- var y .==# 3.1
-  _ <- var z .==# -3.1
+  _ <- var x .== 0
+  _ <- var y .== 3.1
+  _ <- var z .== -3.1
 
   optimizeLP >>= assertFeasible
 
@@ -56,9 +56,9 @@ testFreeVariablesIP = runGlpk $ do
   y <- integer
   z <- integer
 
-  _ <- var x .==# 0
-  _ <- var y .==# 3
-  _ <- var z .==# -3
+  _ <- var x .== 0
+  _ <- var y .== 3
+  _ <- var z .== -3
 
   optimizeIP >>= assertFeasible
 
@@ -73,8 +73,8 @@ testFreeVariablesIP = runGlpk $ do
 testInfeasibleLP :: IO ()
 testInfeasibleLP = runGlpk $ do
   x <- free
-  _ <- var x .>=# 2
-  _ <- var x .<=# 1
+  _ <- var x .>= 2
+  _ <- var x .<= 1
 
   status <- optimizeLP
 
@@ -83,8 +83,8 @@ testInfeasibleLP = runGlpk $ do
 testInfeasibleIP :: IO ()
 testInfeasibleIP = runGlpk $ do
   x <- integer
-  _ <- var x .>=# 2
-  _ <- var x .<=# 1
+  _ <- var x .>= 2
+  _ <- var x .<= 1
 
   status <- optimizeIP
 

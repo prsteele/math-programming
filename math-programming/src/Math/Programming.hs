@@ -28,25 +28,24 @@ module Math.Programming
     -- $modifiers
     within,
     asKind,
-    named,
 
     -- ** Creating constraints
     -- $constraints
 
     -- *** Equality constraints
     (.==.),
-    (#==.),
-    (.==#),
+    (==.),
+    (.==),
 
     -- *** Less-than constraints
     (.<=.),
-    (#<=.),
-    (.<=#),
+    (<=.),
+    (.<=),
 
     -- *** Greater-than constraints
     (.>=.),
-    (#>=.),
-    (.>=#),
+    (>=.),
+    (.>=),
 
     -- ** Creating objectives
     minimize,
@@ -55,6 +54,7 @@ module Math.Programming
     -- ** Creating linear expressions
     -- $expressions
     (.*),
+    (*.),
     (.+),
     (.-),
     (./),
@@ -65,9 +65,6 @@ module Math.Programming
     vsum,
     esum,
     scale,
-
-    -- ** Naming model components
-    -- $naming
 
     -- * Math programs
     -- $mathprograms
@@ -86,9 +83,13 @@ module Math.Programming
     Bounds (..),
     SolutionStatus (..),
     Sense (..),
-    Named (..),
     Inequality (..),
     LinExpr (..),
+
+    -- * Naming model attributes
+    withVariableName,
+    withConstraintName,
+    withObjectiveName,
   )
 where
 
@@ -129,12 +130,6 @@ import Math.Programming.Types
 -- left-hand side, right-hand side, or both sides of the constraint
 -- are expressions. The mnemonic is that @.@ characters point to
 -- expressions, while @#@ characters point to constants.
-
--- $naming
---
--- The 'Named' class allows us to get and set the names of model
--- variables, constraints, and objectives. The 'named' combinator
--- makes it easy to name these as they are created.
 
 -- $mathprograms
 --

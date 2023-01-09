@@ -53,15 +53,15 @@ module Math.Programming
 
     -- ** Creating linear expressions
     -- $expressions
+    var,
+    con,
     (.*),
     (*.),
-    (.+),
-    (.-),
+    (.+.),
+    (.-.),
     (./),
     eval,
     simplify,
-    var,
-    con,
     vsum,
     esum,
     scale,
@@ -115,21 +115,23 @@ import Math.Programming.Types
 
 -- $expressions
 --
--- Since both constraints and objectives involve linear expressions of
--- variables, we need to be able to manipulate them.
---
--- The core of manipulating linear expressions are the '.*' operator,
--- which creates a term in an expression, and '.+', which combines
--- terms into a single expression.
+-- A @'LinExpr' a b@ is a linear expression over variables of type @b@
+-- with coefficients of type @a@ (typically 'Double'.) We provide a
+-- number of operators to build up linear expressions naturally. The
+-- mnemonic is that @.@ characters point to expressions.
 
 -- $constraints
 --
--- We provide a number of operators to create constraints from
--- different types of equality and inequality constraints. There are
--- three variants of each constraint type, based on whether the
--- left-hand side, right-hand side, or both sides of the constraint
--- are expressions. The mnemonic is that @.@ characters point to
--- expressions, while @#@ characters point to constants.
+-- An @'Inequality' a@ is an inequality over the type @a@, which in
+-- turn is typically an @'Expr' v@ for some variable type @v@. Despite
+-- the name, 'Inequality' can also represent equality constraints
+-- directly.
+--
+-- As an alternative to constructing an inequality and passing it to
+-- 'addConstraint', we can use the convenience operators below. Since
+-- linear programming constraints often involve constant bounds, we
+-- offer operators specialized for both expressions and constants. The
+-- mnemonic is that @.@ characters point to expressions
 
 -- $mathprograms
 --

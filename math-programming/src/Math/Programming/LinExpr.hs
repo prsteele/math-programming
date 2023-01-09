@@ -16,7 +16,7 @@ data LinExpr a b
   deriving (Eq, Read, Show, Functor, Foldable, Traversable)
 
 instance Num a => Semigroup (LinExpr a b) where
-  (<>) = (.+)
+  (<>) = (.+.)
 
 instance Num a => Monoid (LinExpr a b) where
   mempty = con 0
@@ -50,17 +50,17 @@ scale coef (LinExpr terms constant) = LinExpr terms' constant'
     constant' = constant * coef
 
 -- | Addition of linear expressions.
-(.+) :: Num a => LinExpr a b -> LinExpr a b -> LinExpr a b
-(.+) (LinExpr terms constant) (LinExpr terms' constant') =
+(.+.) :: Num a => LinExpr a b -> LinExpr a b -> LinExpr a b
+(.+.) (LinExpr terms constant) (LinExpr terms' constant') =
   LinExpr (terms <> terms') (constant + constant')
 
-infixl 6 .+
+infixl 6 .+.
 
 -- | The difference of linear expressions.
-(.-) :: Num a => LinExpr a b -> LinExpr a b -> LinExpr a b
-(.-) x y = x .+ scale (-1) y
+(.-.) :: Num a => LinExpr a b -> LinExpr a b -> LinExpr a b
+(.-.) x y = x .+. scale (-1) y
 
-infixl 6 .-
+infixl 6 .-.
 
 -- | A linear expression with a single variable term.
 var :: Num a => b -> LinExpr a b
@@ -76,7 +76,7 @@ vsum = flip LinExpr 0 . fmap (1,)
 
 -- | The sum of linear expressions.
 esum :: Num a => Foldable t => t (LinExpr a b) -> LinExpr a b
-esum = foldl' (.+) mempty
+esum = foldl' (.+.) mempty
 
 -- | Reduce an expression to its value.
 eval :: Num a => LinExpr a a -> a

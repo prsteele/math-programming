@@ -317,7 +317,7 @@ deleteVariable' variable = do
 
 addConstraint' :: Inequality (Expr GlpkVariable) -> Glpk GlpkConstraint
 addConstraint' (Inequality ordering lhs rhs) =
-  let LinExpr terms constant = simplify (lhs .- rhs) :: Expr GlpkVariable
+  let LinExpr terms constant = simplify (lhs .-. rhs) :: Expr GlpkVariable
 
       constraintType :: GlpkConstraintType
       constraintType = case ordering of

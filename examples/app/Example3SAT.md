@@ -20,8 +20,8 @@ $$
     (x \lor y \lor \lnot z) \land (x \lor y \lor z)
 $$
 
-there are two clauses, $x \lor y \lor \lnot z$ and $\lor x \lor y \lor
-z$. The first clause has the terms $x$, $y$, and $\lnot z$. In this
+there are two clauses, $x \lor y \lor \lnot z$ and $\lor x \lor y \lor z$.
+The first clause has the terms $x$, $y$, and $\lnot z$. In this
 clause the variables $x$ and $y$ have positive sign, and the variable
 $z$ has negative sign. In the second clause all three variables have
 positive sign.
@@ -72,7 +72,7 @@ and $v(i, j)$ to false otherwise.
 
 ## Preamble
 
-We need some language extensions, for convenience.
+We add some language extensions.
 
 ```haskell
 {-# LANGUAGE FlexibleContexts #-}
@@ -112,7 +112,6 @@ newtype Var = Var T.Text
 terms in a clause,
 
 ```haskell
--- | A term in a 3SAT clause.
 data Term
   = Positive Var
   | Negative Var
@@ -195,11 +194,11 @@ newtype AppM a = AppM {unAppM :: StateT (M.Map Var GlpkVariable) Glpk a}
     ( Functor,
       Applicative,
       Monad,
+      MonadGlpk,
       MonadIO,
-      MonadState (M.Map Var GlpkVariable),
-      MonadLP GlpkVariable GlpkConstraint GlpkObjective,
       MonadIP GlpkVariable GlpkConstraint GlpkObjective,
-      MonadGlpk
+      MonadLP GlpkVariable GlpkConstraint GlpkObjective,
+      MonadState (M.Map Var GlpkVariable)
     )
 
 runAppM :: AppM a -> IO a
@@ -208,7 +207,7 @@ runAppM = runGlpk . flip evalStateT M.empty . unAppM
 
 Note that our base monad for the `StateT` transformer is `Glpk`, which
 is itself an instance of `MonadIO`. (Internally, `Glpk` is just a
-`ReaderT GlpkEnv IO`.)
+`ReaderT GlpkEnv IO`.) The list of deriving clauses is unfortunately long.
 
 We could iterate over all clauses to collect the unique set of
 variables, and then allocate a binary variable for each; instead,
@@ -238,13 +237,13 @@ getVar :: Var -> AppM GlpkVariable
 We can now define the function $f$ in our formulation as
 
 ```haskell
-termExpr :: Term -> AppM (Expr GlpkVariable) --
+termExpr :: Term -> AppM (Expr GlpkVariable)
 termExpr (Positive v) = do
   x <- getVar v
   pure (1 *. x)
 termExpr (Negative v) = do
   x <- getVar v
-  pure (con 1 .- var x)
+  pure (con 1 .-. var x)
 ```
 
 Note that we need to keep in mind the difference between our abstract
@@ -260,7 +259,7 @@ var :: Num a => b -> LinExpr a b
 
 and simply lifts a variable to an expression containing just that
 variable. Writing `var x` is entirely equivalent to writing `1 *. x`.
-Similarly, we can use `con` to introduce a constant term into a linear
+Similarly, we use `con` to introduce a constant term into a linear
 expression.
 
 We can now make a function that adds a constraint, given a clause.
@@ -271,7 +270,7 @@ addClause (x, y, z) = do
   vx <- termExpr x
   vy <- termExpr y
   vz <- termExpr z
-  vx .+ vy .+ vz .>= 1
+  vx .+. vy .+. vz .>= 1
   pure ()
 ```
 
@@ -296,8 +295,6 @@ program clauses = do
 
   -- Solve the problem
   status <- optimizeIP
-
-  writeFormulation "tmp.mip"
 
   case status of
     Error -> liftIO (print "Error") >> pure Nothing

@@ -185,6 +185,11 @@ Generals
 End
 ```
 
+# Using a custom monad stack
+
+See the [`Example3SAT.hs`](./Example3SAT.hs) example of using a custom
+type that derives the `MonadLP`, `MonadIP`, and `MonadGlpk` classes.
+
 # Wrapping up
 
 We run all our examples consecutively.

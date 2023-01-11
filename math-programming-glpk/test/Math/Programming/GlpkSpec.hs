@@ -1,17 +1,32 @@
 module Math.Programming.GlpkSpec where
 
+import Control.Monad
 import Control.Monad.IO.Class
+import Data.IORef
 import Math.Programming
 import Math.Programming.Glpk
 import Math.Programming.Tests
+import Math.Programming.Tests.Fuzz
 import Math.Programming.Tests.IP (simpleMIPTest)
 import Math.Programming.Tests.LP (dietProblemTest)
 import Test.Hspec
 import UnliftIO.Async
 
+logFormulation :: IORef Int -> Glpk ()
+logFormulation iRef = do
+  i <- liftIO $ readIORef iRef
+  writeFormulation ("instance" <> show i <> ".mip")
+  liftIO $ modifyIORef' iRef succ
+
 spec :: Spec
 spec = do
   makeAllTests "GLPK" runGlpk
+
+  -- Toggle this to log formulations generated during fuzzing
+  let writeFuzzedFormulations = False
+  when writeFuzzedFormulations $ do
+    iRef <- runIO $ newIORef 0
+    makeFuzzTests (\action -> runGlpk (action >> logFormulation iRef))
 
   describe "Regression tests" $ do
     it "solves an LP with free variables" testFreeVariablesLP

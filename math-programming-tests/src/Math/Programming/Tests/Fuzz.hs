@@ -8,7 +8,9 @@ module Math.Programming.Tests.Fuzz where
 
 import Control.Monad.IO.Class
 import Control.Monad.State
+import Control.Monad.Writer
 import qualified Data.Map as M
+import qualified Data.Sequence as S
 import qualified Data.Text as T
 import Lens.Micro
 import Lens.Micro.Mtl
@@ -101,6 +103,7 @@ initLPState seed todo = do
 type LPFuzz v c o m =
   ( MonadState (LPState v c o) m,
     MonadLP v c o m,
+    MonadWriter (S.Seq String) m,
     MonadIO m
   )
 
@@ -115,13 +118,16 @@ evalPending = do
       evalPending
 
 evalAction :: LPFuzz v c o m => LPAction -> m ()
-evalAction (AddVariable k) = add k addVariable variables
-evalAction (AddThenRemoveVariable k) = addThenRemove k addVariable deleteVariable variables
-evalAction (AddConstraint k) = add k makeConstraint constraints
-evalAction (AddThenRemoveConstraint k) = addThenRemove k makeConstraint deleteConstraint constraints
-evalAction (AddObjective k) = add k makeObjective objectives
-evalAction (AddThenRemoveObjective k) = addThenRemove k makeObjective deleteObjective objectives
-evalAction Optimize = void optimizeLP
+evalAction action = tell (S.singleton (show action)) >> evalAction' action
+
+evalAction' :: LPFuzz v c o m => LPAction -> m ()
+evalAction' (AddVariable k) = add k addVariable variables
+evalAction' (AddThenRemoveVariable k) = addThenRemove k addVariable deleteVariable variables
+evalAction' (AddConstraint k) = add k makeConstraint constraints
+evalAction' (AddThenRemoveConstraint k) = addThenRemove k makeConstraint deleteConstraint constraints
+evalAction' (AddObjective k) = add k makeObjective objectives
+evalAction' (AddThenRemoveObjective k) = addThenRemove k makeObjective deleteObjective objectives
+evalAction' Optimize = void optimizeLP
 
 add :: (LPFuzz v c o m, Ord k) => k -> m a -> ASetter' (LPState v c o) (M.Map k a) -> m ()
 add k create focus =
@@ -172,12 +178,13 @@ makeObjective = do
 makeFuzzTests ::
   (MonadIO m, MonadLP v c o m) =>
   -- | The runner for the API being tested.
-  (m () -> IO ()) ->
+  (m (S.Seq String) -> IO ()) ->
   -- | The resulting test suite.
   Spec
 makeFuzzTests runner =
   describe "Fuzz testing" $ do
     prop "finds no failures" $ \seed (LPActions todo) -> do
       initState <- liftIO (initLPState seed todo)
-      runner . flip evalStateT initState $ do
-        evalPending
+      runner . execWriterT
+        . flip evalStateT initState
+        $ evalPending

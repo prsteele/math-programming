@@ -9,8 +9,10 @@
 module Math.Programming.Types where
 
 import Control.Monad.Trans.Class
+import Control.Monad.Trans.RWS
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.State
+import Control.Monad.Trans.Writer
 import qualified Data.Text as T
 import Math.Programming.LinExpr
 
@@ -114,6 +116,54 @@ lift2 :: (MonadTrans t, Monad m) => (a -> b -> m c) -> (a -> b -> t m c)
 lift2 = compose2 lift
 
 instance (MonadLP v c o m) => MonadLP v c o (ReaderT r m) where
+  addVariable = lift addVariable
+  deleteVariable = lift . deleteVariable
+  getVariableName = lift . getVariableName
+  setVariableName = lift2 setVariableName
+  getVariableValue = lift . getVariableValue
+  getVariableBounds = lift . getVariableBounds
+  setVariableBounds = lift2 setVariableBounds
+  addConstraint = lift . addConstraint
+  deleteConstraint = lift . deleteConstraint
+  getConstraintName = lift . getConstraintName
+  setConstraintName = lift2 setConstraintName
+  getConstraintValue = lift . getConstraintValue
+  addObjective = lift . addObjective
+  deleteObjective = lift . deleteObjective
+  getObjectiveName = lift . getObjectiveName
+  setObjectiveName = lift2 setObjectiveName
+  getObjectiveValue = lift . getObjectiveValue
+  getObjectiveSense = lift . getObjectiveSense
+  setObjectiveSense = lift2 setObjectiveSense
+  getTimeout = lift getTimeout
+  setTimeout = lift . setTimeout
+  optimizeLP = lift optimizeLP
+
+instance (MonadLP v c o m, Monoid w) => MonadLP v c o (WriterT w m) where
+  addVariable = lift addVariable
+  deleteVariable = lift . deleteVariable
+  getVariableName = lift . getVariableName
+  setVariableName = lift2 setVariableName
+  getVariableValue = lift . getVariableValue
+  getVariableBounds = lift . getVariableBounds
+  setVariableBounds = lift2 setVariableBounds
+  addConstraint = lift . addConstraint
+  deleteConstraint = lift . deleteConstraint
+  getConstraintName = lift . getConstraintName
+  setConstraintName = lift2 setConstraintName
+  getConstraintValue = lift . getConstraintValue
+  addObjective = lift . addObjective
+  deleteObjective = lift . deleteObjective
+  getObjectiveName = lift . getObjectiveName
+  setObjectiveName = lift2 setObjectiveName
+  getObjectiveValue = lift . getObjectiveValue
+  getObjectiveSense = lift . getObjectiveSense
+  setObjectiveSense = lift2 setObjectiveSense
+  getTimeout = lift getTimeout
+  setTimeout = lift . setTimeout
+  optimizeLP = lift optimizeLP
+
+instance (MonadLP v c o m, Monoid w) => MonadLP v c o (RWST r w s m) where
   addVariable = lift addVariable
   deleteVariable = lift . deleteVariable
   getVariableName = lift . getVariableName

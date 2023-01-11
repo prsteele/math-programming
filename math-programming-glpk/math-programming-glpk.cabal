@@ -44,3 +44,4 @@ test-suite math-programming-glpk-test-suite
                    , math-programming-tests ^>=0.5
                    , unliftio               ^>=0.2
                    , hspec                  ^>=2.8
+                   , hspec-core             ^>=2.8

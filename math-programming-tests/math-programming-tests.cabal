@@ -24,10 +24,17 @@ library
                    , Math.Programming.Tests.Api
                    , Math.Programming.Tests.LP
                    , Math.Programming.Tests.IP
+                   , Math.Programming.Tests.Fuzz
   other-modules:
   ghc-options:       -Wall
   build-depends:     base             <5
+                   , containers       ^>=0.6
                    , math-programming ^>=0.5
+                   , microlens        ^>=0.4
+                   , microlens-th     ^>=0.4
+                   , microlens-mtl    ^>=0.2
                    , hspec            ^>=2.8
                    , QuickCheck       ^>=2.14
+                   , random           ^>=1.2
+                   , mtl              ^>=2.2
                    , text             ^>=1.2

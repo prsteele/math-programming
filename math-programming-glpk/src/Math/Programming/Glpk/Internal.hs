@@ -13,6 +13,7 @@ module Math.Programming.Glpk.Internal where
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Reader
+import Control.Monad.Trans.State
 import Data.Functor
 import qualified Data.Text as T
 import Data.Typeable
@@ -38,6 +39,9 @@ type GlpkConstraint = GlpkPtr Row
 -- GLPK supports only single-objective problems, and so no indices
 -- need to be stored.
 newtype GlpkObjective = GlpkObjective ()
+
+class (MonadLP GlpkVariable GlpkConstraint GlpkObjective m, MonadIP GlpkVariable GlpkConstraint GlpkObjective m) => MonadGlpk m where
+  writeFormulation :: FilePath -> m ()
 
 -- | An interface to the low-level GLPK API.
 --
@@ -115,41 +119,45 @@ type Glpk = GlpkT IO
 instance MonadLP GlpkVariable GlpkConstraint GlpkObjective Glpk where
   addVariable = addVariable'
   deleteVariable = deleteVariable'
+  getVariableName = getVariableName'
+  setVariableName = setVariableName'
   getVariableValue = getVariableValue'
-  getBounds = getVariableBounds'
-  setBounds = setVariableBounds'
+  getVariableBounds = getVariableBounds'
+  setVariableBounds = setVariableBounds'
+
   addConstraint = addConstraint'
   deleteConstraint = deleteConstraint'
+  getConstraintName = getConstraintName'
+  setConstraintName = setConstraintName'
   getConstraintValue = getDualValue
 
   addObjective = addObjective'
   deleteObjective = deleteObjective'
+  getObjectiveName = getObjectiveName'
+  setObjectiveName = setObjectiveName'
   getObjectiveValue = getObjectiveValue'
-  getSense = getSense'
-  setSense = setSense'
+  getObjectiveSense = getSense'
+  setObjectiveSense = setSense'
 
   getTimeout = getTimeout'
   setTimeout = setTimeout'
   optimizeLP = optimizeLP'
 
-instance Named GlpkVariable Glpk where
-  getName = getVariableName'
-  setName = setVariableName'
-
-instance Named GlpkConstraint Glpk where
-  getName = getConstraintName'
-  setName = setConstraintName'
-
-instance Named GlpkObjective Glpk where
-  getName = getObjectiveName'
-  setName = setObjectiveName'
-
 instance MonadIP GlpkVariable GlpkConstraint GlpkObjective Glpk where
-  getDomain = getVariableDomain'
-  setDomain = setVariableDomain'
+  getVariableDomain = getVariableDomain'
+  setVariableDomain = setVariableDomain'
   getRelativeMIPGap = getRelativeMIPGap'
   setRelativeMIPGap = setRelativeMIPGap'
   optimizeIP = optimizeIP'
+
+instance MonadGlpk Glpk where
+  writeFormulation = writeFormulation'
+
+instance MonadGlpk m => MonadGlpk (ReaderT r m) where
+  writeFormulation = lift . writeFormulation
+
+instance MonadGlpk m => MonadGlpk (StateT s m) where
+  writeFormulation = lift . writeFormulation
 
 withGlpkErrorHook :: (Ptr a -> IO CInt) -> Ptr a -> IO b -> IO b
 withGlpkErrorHook hook ptr actions =
@@ -309,7 +317,7 @@ deleteVariable' variable = do
 
 addConstraint' :: Inequality (Expr GlpkVariable) -> Glpk GlpkConstraint
 addConstraint' (Inequality ordering lhs rhs) =
-  let LinExpr terms constant = simplify (lhs .- rhs) :: Expr GlpkVariable
+  let LinExpr terms constant = simplify (lhs .-. rhs) :: Expr GlpkVariable
 
       constraintType :: GlpkConstraintType
       constraintType = case ordering of
@@ -390,9 +398,9 @@ addObjective' expr =
 
 -- | Delete an objective
 --
--- There is nothing to acdtually delete, so we just set a zero objective
+-- There is nothing to actually delete, so we just set a zero objective
 deleteObjective' :: GlpkObjective -> Glpk ()
-deleteObjective' _ = addObjective' mempty >> pure ()
+deleteObjective' _ = void (addObjective' mempty)
 
 getObjectiveName' :: GlpkObjective -> Glpk T.Text
 getObjectiveName' _ = do
@@ -579,8 +587,8 @@ solutionStatus status
   | otherwise = Error
 
 -- | Write out the current formulation to a file.
-writeFormulation :: FilePath -> Glpk ()
-writeFormulation fileName = do
+writeFormulation' :: FilePath -> Glpk ()
+writeFormulation' fileName = do
   problem <- askProblem
   _ <- liftIO $ withCString fileName (glp_write_lp problem nullPtr)
   return ()

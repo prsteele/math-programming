@@ -2,9 +2,11 @@
 
 module Math.Programming.Tests where
 
+import Control.Monad
 import Control.Monad.IO.Class
 import Math.Programming
 import Math.Programming.Tests.Api
+import Math.Programming.Tests.Fuzz
 import Math.Programming.Tests.IP
 import Math.Programming.Tests.LP
 import Test.Hspec
@@ -24,3 +26,4 @@ makeAllTests apiName runner =
     makeApiTests runner
     makeLPTests runner
     makeIPTests runner
+    makeFuzzTests (runner . void)

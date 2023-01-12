@@ -32,9 +32,9 @@ simpleMIPTest :: (MonadIO m, MonadIP v c o m) => m ()
 simpleMIPTest = do
   x <- bounded 0 5 `asKind` Integer
   y <- bounded 0 5 `asKind` Continuous
-  _ <- var x .>=# 1.1
-  _ <- var y .>=# 1.1
-  objective <- minimize $ var x .+ var y
+  _ <- var x .>= 1.1
+  _ <- var y .>= 1.1
+  objective <- minimize $ var x .+. var y
   status <- optimizeIP
 
   -- Check that we reached optimality

@@ -71,7 +71,7 @@ coefficientCommutativityProp (ShuffledCoefficients (shuffled, unshuffled)) =
 
 additiveAssociativityProp :: ExactExpr -> ExactExpr -> ExactExpr -> Bool
 additiveAssociativityProp x y z =
-  eval ((x .+ y) .+ z) == eval (x .+ (y .+ z))
+  eval ((x .+. y) .+. z) == eval (x .+. (y .+. z))
 
 simplifyProp :: ExactExpr -> Bool
 simplifyProp x = eval x == eval (simplify x)

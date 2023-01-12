@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Math.Programming.Tests.Api where
@@ -20,19 +19,19 @@ makeApiTests runner =
     it "sets and gets variable names" (runner setGetVariableName)
     it "sets and gets constraint names" (runner setGetConstraintName)
 
--- | We should be able to set and retrieve variable names
 setGetVariableName :: (MonadIO m, MonadLP v c o m) => m ()
 setGetVariableName = do
   let name = "foo"
-  x <- free `named` name
-  vName <- getName x
+  x <- free
+  setVariableName x name
+  vName <- getVariableName x
   liftIO $ vName `shouldBe` name
 
--- | We should be able to set and retrieve constraint names
 setGetConstraintName :: (MonadIO m, MonadLP v c o m) => m ()
 setGetConstraintName = do
   let name = "foo"
   x <- free
-  c <- (var x .>=# 0) `named` name
-  cName <- getName c
+  c <- var x .>= 0
+  setConstraintName c name
+  cName <- getConstraintName c
   liftIO $ cName `shouldBe` name

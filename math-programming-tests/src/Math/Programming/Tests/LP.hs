@@ -87,21 +87,24 @@ dietProblemTest =
    in do
         -- Create the decision variables
         amounts <- forM foods $ \food -> do
-          v <- free `within` amountInterval `named` amountName food
+          v <- free `within` amountInterval
+          setVariableName v (amountName food)
           return (food, v)
 
         -- Create the nutrient constraints
         forM_ nutrients $ \nutrient -> do
-          let lhs = esum [nutrition nutrient food .* v | (food, v) <- amounts]
+          let lhs = esum [nutrition nutrient food *. v | (food, v) <- amounts]
               (lower, upper) = nutrientBounds nutrient
-          _ <- (lhs .<=# upper) `named` nutrientMaxName nutrient
-          _ <- (lhs .>=# lower) `named` nutrientMinName nutrient
+          u <- lhs .<= upper
+          setConstraintName u (nutrientMaxName nutrient)
+          l <- lhs .>= lower
+          setConstraintName l (nutrientMinName nutrient)
           pure ()
 
         -- Set the objective
-        let objectiveExpr = esum [cost food .* v | (food, v) <- amounts]
+        let objectiveExpr = esum [cost food *. v | (food, v) <- amounts]
         objective <- addObjective objectiveExpr
-        setSense objective Minimization
+        setObjectiveSense objective Minimization
 
         -- Solve the problem
         status <- optimizeLP

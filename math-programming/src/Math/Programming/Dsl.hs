@@ -1,9 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Math.Programming.Dsl where
 
@@ -17,14 +14,14 @@ import Text.Printf
 minimize :: MonadLP v c o m => Expr v -> m o
 minimize objectiveExpr = do
   objective <- addObjective objectiveExpr
-  setSense objective Minimization
+  setObjectiveSense objective Minimization
   pure objective
 
 -- | Create an objective to be maximized.
 maximize :: MonadLP v c o m => Expr v -> m o
 maximize objectiveExpr = do
   objective <- addObjective objectiveExpr
-  setSense objective Maximization
+  setObjectiveSense objective Maximization
   pure objective
 
 -- | Get the value of a linear expression in the current solution.
@@ -60,7 +57,7 @@ bounded lo hi = within addVariable (Interval lo hi)
 within :: MonadLP v c o m => m v -> Bounds -> m v
 within makeVar bounds = do
   variable <- makeVar
-  setBounds variable bounds
+  setVariableBounds variable bounds
   pure variable
 
 -- | Create an integer-valued variable.
@@ -89,78 +86,86 @@ nonPosInteger = addVariable `asKind` Integer `within` NonPositiveReals
 asKind :: MonadIP v c o m => m v -> Domain -> m v
 asKind make dom = do
   variable <- make
-  setDomain variable dom
+  setVariableDomain variable dom
   pure variable
-
--- | Name a variable, constraint, or objective.
---
--- This function is designed to be used as an infix operator, e.g.
---
--- @
--- 'free' \``named`\` \"X_1\"
--- @
-named :: (Monad m, Named a m) => m a -> T.Text -> m a
-named make n = do
-  x <- make
-  setName x n
-  pure x
 
 -- | A less-than or equal-to constraint
 (.<=.) :: MonadLP v c o m => Expr v -> Expr v -> m c
 (.<=.) x y = addConstraint $ Inequality LT x y
 
 -- | A less-than or equal-to constraint with a numeric left-hand side
-(#<=.) :: MonadLP v c o m => Double -> Expr v -> m c
-(#<=.) x y = con x .<=. y
+(<=.) :: MonadLP v c o m => Double -> Expr v -> m c
+(<=.) x y = con x .<=. y
 
 -- | A less-than or equal-to constraint with a numeric right-hand side
-(.<=#) :: MonadLP v c o m => Expr v -> Double -> m c
-(.<=#) x y = x .<=. con y
+(.<=) :: MonadLP v c o m => Expr v -> Double -> m c
+(.<=) x y = x .<=. con y
 
 -- | A greater-than or equal-to constraint
 (.>=.) :: MonadLP v c o m => Expr v -> Expr v -> m c
 (.>=.) x y = addConstraint $ Inequality GT x y
 
 -- | A greater-than or equal-to constraint with a numeric left-hand side
-(#>=.) :: MonadLP v c o m => Double -> Expr v -> m c
-(#>=.) x y = con x .>=. y
+(>=.) :: MonadLP v c o m => Double -> Expr v -> m c
+(>=.) x y = con x .>=. y
 
 -- | A greater-than or equal-to constraint with a numeric right-hand side
-(.>=#) :: MonadLP v c o m => Expr v -> Double -> m c
-(.>=#) x y = x .>=. con y
+(.>=) :: MonadLP v c o m => Expr v -> Double -> m c
+(.>=) x y = x .>=. con y
 
 -- | An equality constraint
 (.==.) :: MonadLP v c o m => Expr v -> Expr v -> m c
 (.==.) x y = addConstraint $ Inequality EQ x y
 
 -- | An equality constraint with a numeric left-hand side
-(#==.) :: MonadLP v c o m => Double -> Expr v -> m c
-(#==.) x y = con x .==. y
+(==.) :: MonadLP v c o m => Double -> Expr v -> m c
+(==.) x y = con x .==. y
 
 -- | An equality constraint with a numeric right-hand side
-(.==#) :: MonadLP v c o m => Expr v -> Double -> m c
-(.==#) x y = x .==. con y
+(.==) :: MonadLP v c o m => Expr v -> Double -> m c
+(.==) x y = x .==. con y
 
-infix 4 #<=.
+infix 4 <=.
 
-infix 4 .<=#
+infix 4 .<=
 
 infix 4 .<=.
 
-infix 4 #>=.
+infix 4 >=.
 
-infix 4 .>=#
+infix 4 .>=
 
 infix 4 .>=.
 
-infix 4 #==.
+infix 4 ==.
 
-infix 4 .==#
+infix 4 .==
 
 infix 4 .==.
 
-formatExpr :: (Monad m, Named v m) => Expr v -> m T.Text
-formatExpr (LinExpr terms coef) = do
-  names <- mapM (traverse getName) terms
+formatExpr :: MonadLP v c o m => Expr v -> m T.Text
+formatExpr = formatExpr' getVariableName
+
+formatExpr' :: Monad m => (v -> m T.Text) -> Expr v -> m T.Text
+formatExpr' nameOf (LinExpr terms coef) = do
+  names <- mapM (traverse nameOf) terms
   let strTerms = fmap (T.pack . uncurry (printf "%f * %s")) names
   pure $ T.intercalate " + " (strTerms <> [T.pack (show coef)])
+
+withVariableName :: MonadLP v c o m => m v -> T.Text -> m v
+withVariableName mv name = do
+  v <- mv
+  setVariableName v name
+  pure v
+
+withConstraintName :: MonadLP v c o m => m c -> T.Text -> m c
+withConstraintName mc name = do
+  c <- mc
+  setConstraintName c name
+  pure c
+
+withObjectiveName :: MonadLP v c o m => m o -> T.Text -> m o
+withObjectiveName mo name = do
+  o <- mo
+  setObjectiveName o name
+  pure o

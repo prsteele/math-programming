@@ -1,17 +1,32 @@
 module Math.Programming.GlpkSpec where
 
+import Control.Monad
 import Control.Monad.IO.Class
+import Data.IORef
 import Math.Programming
 import Math.Programming.Glpk
 import Math.Programming.Tests
+import Math.Programming.Tests.Fuzz
 import Math.Programming.Tests.IP (simpleMIPTest)
 import Math.Programming.Tests.LP (dietProblemTest)
 import Test.Hspec
 import UnliftIO.Async
 
+logFormulation :: IORef Int -> Glpk ()
+logFormulation iRef = do
+  i <- liftIO $ readIORef iRef
+  writeFormulation ("instance" <> show i <> ".mip")
+  liftIO $ modifyIORef' iRef succ
+
 spec :: Spec
 spec = do
   makeAllTests "GLPK" runGlpk
+
+  -- Toggle this to log formulations generated during fuzzing
+  let writeFuzzedFormulations = False
+  when writeFuzzedFormulations $ do
+    iRef <- runIO $ newIORef 0
+    makeFuzzTests (\action -> runGlpk (action >> logFormulation iRef))
 
   describe "Regression tests" $ do
     it "solves an LP with free variables" testFreeVariablesLP
@@ -36,9 +51,9 @@ testFreeVariablesLP = runGlpk $ do
   y <- free
   z <- free
 
-  _ <- var x .==# 0
-  _ <- var y .==# 3.1
-  _ <- var z .==# -3.1
+  _ <- var x .== 0
+  _ <- var y .== 3.1
+  _ <- var z .== -3.1
 
   optimizeLP >>= assertFeasible
 
@@ -56,9 +71,9 @@ testFreeVariablesIP = runGlpk $ do
   y <- integer
   z <- integer
 
-  _ <- var x .==# 0
-  _ <- var y .==# 3
-  _ <- var z .==# -3
+  _ <- var x .== 0
+  _ <- var y .== 3
+  _ <- var z .== -3
 
   optimizeIP >>= assertFeasible
 
@@ -73,8 +88,8 @@ testFreeVariablesIP = runGlpk $ do
 testInfeasibleLP :: IO ()
 testInfeasibleLP = runGlpk $ do
   x <- free
-  _ <- var x .>=# 2
-  _ <- var x .<=# 1
+  _ <- var x .>= 2
+  _ <- var x .<= 1
 
   status <- optimizeLP
 
@@ -83,8 +98,8 @@ testInfeasibleLP = runGlpk $ do
 testInfeasibleIP :: IO ()
 testInfeasibleIP = runGlpk $ do
   x <- integer
-  _ <- var x .>=# 2
-  _ <- var x .<=# 1
+  _ <- var x .>= 2
+  _ <- var x .<= 1
 
   status <- optimizeIP
 

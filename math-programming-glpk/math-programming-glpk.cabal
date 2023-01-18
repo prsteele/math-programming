@@ -8,10 +8,10 @@ license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Patrick Steele
 maintainer:          steele.pat@gmail.com
-copyright:           2018-2021, Patrick Steele
+copyright:           2018-2023, Patrick Steele
 category:            Math
 build-type:          Simple
-extra-source-files:  README.md, ChangeLog.md
+extra-source-files:  ChangeLog.md
 
 source-repository head
   type:     git

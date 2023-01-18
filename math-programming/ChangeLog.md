@@ -1,5 +1,10 @@
 # Changelog for math-programming
 
+## [0.5.0] -- 18 January 2023
+### Changed
+
+- The API has been made more consistent.
+
 ## [0.4.0] -- 5 July 2020
 ### Added
 

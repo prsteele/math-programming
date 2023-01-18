@@ -3,6 +3,11 @@
 This repository contains a number of Haskell packages used to solve
 math programming problems.
 
+## Quick start
+
+Check out the [`examples`](./examples/); these show you how to get
+started modeling and solving math programs.
+
 ## Packages
 
 - [`math-programming`](./math-programming/), a high-level interface

@@ -1,6 +1,6 @@
 # Changelog for `math-programming-glpk`
 
-## [Unreleased]
+## [0.5.0] -- 18 January 2023
 
 ### Changed
 

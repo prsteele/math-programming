@@ -1,6 +1,6 @@
 cabal-version:       2.4
 name:                math-programming
-version:             0.5.0
+version:             0.5.1
 synopsis:            A library for formulating and solving math programs.
 description:         Please see the <https://github.com/prsteele/math-programming/blob/main/README.md README on GitHub>.
 bug-reports:         https://github.com/prsteele/math-programming/issues
@@ -44,7 +44,7 @@ test-suite math-programming-test-suite
                    , Math.Programming.DslSpec
   build-depends:     math-programming
                    , base       <5
-                   , hspec      ^>=2.8
+                   , hspec      >=2.8 && <3
                    , mtl        ^>=2.2
                    , QuickCheck ^>=2.14
                    , text       ^>=1.2

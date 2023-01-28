@@ -1,6 +1,6 @@
 cabal-version:       2.4
 name:                math-programming-glpk
-version:             0.5.0
+version:             0.5.1
 synopsis:            A GLPK backend to the math-programming library.
 description:         Please see the <https://github.com/prsteele/math-programming/blob/main/README.md README on GitHub>.
 bug-reports:         https://github.com/prsteele/math-programming/issues
@@ -43,5 +43,4 @@ test-suite math-programming-glpk-test-suite
                    , math-programming       ^>=0.5
                    , math-programming-tests ^>=0.5
                    , unliftio               ^>=0.2
-                   , hspec                  ^>=2.8
-                   , hspec-core             ^>=2.8
+                   , hspec                  >=2.8 && < 3

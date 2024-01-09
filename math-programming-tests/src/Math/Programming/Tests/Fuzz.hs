@@ -6,6 +6,7 @@
 -- | Fuzz testing for math programming backends.
 module Math.Programming.Tests.Fuzz where
 
+import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.State
 import Control.Monad.Writer
@@ -107,7 +108,7 @@ type LPFuzz v c o m =
     MonadIO m
   )
 
-evalPending :: LPFuzz v c o m => m ()
+evalPending :: (LPFuzz v c o m) => m ()
 evalPending = do
   todo <- use pending
   case todo of
@@ -117,10 +118,10 @@ evalPending = do
       evalAction x
       evalPending
 
-evalAction :: LPFuzz v c o m => LPAction -> m ()
+evalAction :: (LPFuzz v c o m) => LPAction -> m ()
 evalAction action = tell (S.singleton (show action)) >> evalAction' action
 
-evalAction' :: LPFuzz v c o m => LPAction -> m ()
+evalAction' :: (LPFuzz v c o m) => LPAction -> m ()
 evalAction' (AddVariable k) = add k addVariable variables
 evalAction' (AddThenRemoveVariable k) = addThenRemove k addVariable deleteVariable variables
 evalAction' (AddConstraint k) = add k makeConstraint constraints
@@ -140,14 +141,14 @@ addThenRemove k create destroy focus = do
     Just v -> destroy v >> modifying focus (M.delete k)
     Nothing -> add k create focus
 
-makeConstraint :: LPFuzz v c o m => m c
+makeConstraint :: (LPFuzz v c o m) => m c
 makeConstraint = do
   lhs <- chooseExpr
   rhs <- chooseExpr
   op <- chooseInequality
   lhs `op` rhs
 
-chooseExpr :: LPFuzz v c o m => m (Expr v)
+chooseExpr :: (LPFuzz v c o m) => m (Expr v)
 chooseExpr = do
   g <- use randomGen
   vs <- use variables
@@ -157,7 +158,7 @@ chooseExpr = do
 
   pure (esum terms)
 
-chooseInequality :: LPFuzz v c o m => m (Expr v -> Expr v -> m c)
+chooseInequality :: (LPFuzz v c o m) => m (Expr v -> Expr v -> m c)
 chooseInequality = do
   g <- use randomGen
   d3 <- liftIO (uniformRM (0 :: Int, 2) g)
@@ -166,7 +167,7 @@ chooseInequality = do
     1 -> pure (.>=.)
     _ -> pure (.==.)
 
-makeObjective :: LPFuzz v c o m => m o
+makeObjective :: (LPFuzz v c o m) => m o
 makeObjective = do
   g <- use randomGen
   minimizing <- liftIO (uniformM g)
@@ -185,6 +186,7 @@ makeFuzzTests runner =
   describe "Fuzz testing" $ do
     prop "finds no failures" $ \seed (LPActions todo) -> do
       initState <- liftIO (initLPState seed todo)
-      runner . execWriterT
+      runner
+        . execWriterT
         . flip evalStateT initState
         $ evalPending

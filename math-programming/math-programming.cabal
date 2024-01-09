@@ -28,11 +28,11 @@ library
   ghc-options:       -Wall
   -- Restrictions on transformers due to https://hub.darcs.net/ross/transformers/issue/90
   build-depends:     base         <5
-                   , containers   ^>=0.6
-                   , exceptions   ^>=0.10
-                   , mtl          ^>=2.2
-                   , text         ^>=1.2
-                   , transformers ^>=0.5
+                   , containers   >=0.6
+                   , exceptions   >=0.10
+                   , mtl          >=2.2
+                   , text         >=1.2
+                   , transformers >=0.5
 
 test-suite math-programming-test-suite
   default-language:  Haskell2010
@@ -45,6 +45,6 @@ test-suite math-programming-test-suite
   build-depends:     math-programming
                    , base       <5
                    , hspec      >=2.8 && <3
-                   , mtl        ^>=2.2
-                   , QuickCheck ^>=2.14
-                   , text       ^>=1.2
+                   , mtl        >=2.2
+                   , QuickCheck >=2.14
+                   , text       >=1.2

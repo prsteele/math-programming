@@ -14,7 +14,7 @@
       in
         {
           packages.HiGHS = package;
-          packages.default = self.packages.${system}.${package};
+          packages.default = self.packages.${system}.HiGHS;
           devShells.default = pkgs.mkShell {
             buildInputs = [ pkgs.cmake package pkgs.gcc12 ];
           };

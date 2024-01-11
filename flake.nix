@@ -4,12 +4,14 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs";
     flake-utils.url = "github:numtide/flake-utils";
+    HiGHS-headers.url = "path:./HiGHS-headers";
   };
 
-  outputs = { self, nixpkgs, flake-utils, ... }:
+  outputs = { self, nixpkgs, flake-utils, HiGHS-headers, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+        highs = pkgs.callPackage ./HiGHS-headers/highs.nix { };
         haskellPackages = pkgs.haskellPackages.override {
           overrides = self: super: {
             examples               = self.callCabal2nix "examples"               ./examples               {};
@@ -39,6 +41,7 @@
               pkgs.haskellPackages.haskell-language-server
               pkgs.ormolu
               pkgs.cabal-install
+              HiGHS-headers.packages.${system}.HiGHS
             ];
             withHoogle = true;
             doBenchmark = true;

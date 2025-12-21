@@ -9,4 +9,5 @@ jobs:
     - uses: cachix/install-nix-action@v18
       with:
         nix_path: nixpkgs=channel:nixos-unstable
-    - run: cabal test all --test-show-details=streaming
+    - run: |
+        nix develop --command cabal test all --test-show-details=streaming
